@@ -1,0 +1,26 @@
+<!-- Root layout wrapper -->
+<div class="min-h-screen flex flex-col bg-transparent text-slate-800 dark:text-slate-100 transition-colors duration-500">
+  
+  <!-- Header Navigation -->
+  <app-navbar></app-navbar>
+
+  <!-- Router Views Outlet -->
+  <div class="flex-grow">
+    <router-outlet></router-outlet>
+  </div>
+
+  <!-- Footer Info -->
+  <app-footer></app-footer>
+
+  <!-- Floating WhatsApp Widget -->
+  <a href="https://wa.me/919848257578" target="_blank" rel="noopener noreferrer" 
+     class="fixed bottom-6 right-6 z-50 flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-3 rounded-full shadow-2xl hover:scale-105 transition-all duration-300 group border border-emerald-400/20 backdrop-blur-md">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16">
+      <path d="M13.601 2.326A7.85 7.85 0 0 0 8 .258c-4.3 0-7.805 3.505-7.805 7.805 0 1.376.354 2.721 1.026 3.918L.028 16l4.241-1.112a7.8 7.8 0 0 0 3.731.944h.005a7.805 7.805 0 0 0 7.805-7.805 7.8 7.8 0 0 0-2.308-5.526zM8 14.17c-1.208 0-2.395-.325-3.433-.94l-.245-.145-2.55.669.681-2.482-.16-.254a6.49 6.49 0 0 1-1.012-3.473c0-3.58 2.91-6.49 6.49-6.49a6.49 6.49 0 0 1 6.49 6.49c0 3.58-2.91 6.49-6.49 6.49zm3.857-4.809c-.213-.107-1.262-.622-1.457-.69-.195-.07-.338-.107-.48.107-.14.214-.543.69-.665.828-.122.14-.244.156-.457.05-.213-.107-.9-.33-1.714-1.053-.633-.564-1.06-1.26-1.184-1.472-.124-.213-.013-.328.093-.433.096-.095.213-.248.32-.372.107-.124.143-.213.213-.356.071-.143.036-.268-.018-.375-.053-.107-.48-1.156-.658-1.583-.173-.418-.363-.362-.48-.368-.121-.006-.26-.008-.4-.008a.77.77 0 0 0-.56.262c-.194.214-.741.724-.741 1.764s.752 2.044.857 2.183c.105.14 1.48 2.262 3.587 3.172.5.217.89.347 1.192.443.504.16 1.054.138 1.45-.022.44-.178 1.262-.516 1.44-.997.177-.481.177-.892.124-.997-.053-.105-.195-.16-.407-.267z"/>
+    </svg>
+    <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-500 ease-in-out text-xs font-black uppercase tracking-wider whitespace-nowrap">
+      Chat With Us
+    </span>
+  </a>
+
+</div>

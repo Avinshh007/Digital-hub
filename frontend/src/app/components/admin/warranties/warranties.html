@@ -1,0 +1,365 @@
+<!-- src/app/components/admin/warranties/warranties.html -->
+<div class="space-y-6">
+
+  <!-- Section Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Warranties & AMC Contracts</h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">Track component warranty timelines and coordinate AMC maintenance agreements for institutional clients.</p>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <button 
+        *ngIf="activeTab() === 'warranties'"
+        (click)="openRegisterWarranty()"
+        class="bg-blue-600 hover:bg-blue-700 text-white dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 font-bold uppercase tracking-wider text-xs px-5 py-3 rounded-xl transition-all shadow cursor-pointer"
+      >
+        + Register Warranty
+      </button>
+      <button 
+        *ngIf="activeTab() === 'amcs'"
+        (click)="openRegisterAmc()"
+        class="bg-blue-600 hover:bg-blue-700 text-white dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 font-bold uppercase tracking-wider text-xs px-5 py-3 rounded-xl transition-all shadow cursor-pointer"
+      >
+        + Create AMC
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="flex border-b border-slate-200 dark:border-slate-800">
+    <button 
+      (click)="activeTab.set('warranties')"
+      [ngClass]="activeTab() === 'warranties' ? 'border-blue-600 text-blue-600 dark:border-amber-500 dark:text-amber-500' : 'border-transparent text-slate-500 dark:text-slate-400'"
+      class="border-b-2 py-3 px-6 text-sm font-black uppercase tracking-wider transition-all cursor-pointer"
+    >
+      Expiring Warranties
+    </button>
+    <button 
+      (click)="activeTab.set('amcs')"
+      [ngClass]="activeTab() === 'amcs' ? 'border-blue-600 text-blue-600 dark:border-amber-500 dark:text-amber-500' : 'border-transparent text-slate-500 dark:text-slate-400'"
+      class="border-b-2 py-3 px-6 text-sm font-black uppercase tracking-wider transition-all cursor-pointer"
+    >
+      AMC Maintenance
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="h-64 flex flex-col items-center justify-center space-y-2">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-amber-500"></div>
+    <span class="text-xs text-slate-400 uppercase tracking-widest font-bold">Synchronizing Timelines...</span>
+  </div>
+
+  <!-- Warranties Panel -->
+  <div *ngIf="!loading() && activeTab() === 'warranties'" class="space-y-6">
+    <!-- Expiring Warnings Info alert -->
+    <div class="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl flex items-center space-x-3 text-xs text-amber-800 dark:text-amber-400">
+      <svg class="w-5 h-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <div>
+        <span class="font-black uppercase tracking-wide block">Active Warnings</span>
+        <span>The following list aggregates active retail customer warranties expiring within the next 30 days. Consider sending renewal reminders.</span>
+      </div>
+    </div>
+
+    <!-- Warranties table -->
+    <div class="glass-panel rounded-[2rem] border shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 uppercase text-[9px] font-black tracking-widest border-b dark:border-slate-800">
+            <tr>
+              <th class="py-4 px-6">Serial Code</th>
+              <th class="py-4 px-6">Part Name</th>
+              <th class="py-4 px-6">Customer Name</th>
+              <th class="py-4 px-6">Expiry Date</th>
+              <th class="py-4 px-6 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-700 dark:text-slate-355">
+            <tr *ngFor="let w of expiringWarranties()" class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20">
+              <td class="py-4 px-6 font-mono font-bold uppercase text-slate-800 dark:text-slate-200">{{ w.serialNumber }}</td>
+              <td class="py-4 px-6 truncate max-w-[200px]" [title]="w.product?.name">{{ w.product?.name }}</td>
+              <td class="py-4 px-6">
+                <div>{{ w.customerName }}</div>
+                <div class="text-[10px] text-slate-400">{{ w.customerEmail }}</div>
+              </td>
+              <td class="py-4 px-6 text-rose-500 font-bold">{{ w.endDate | date:'mediumDate' }}</td>
+              <td class="py-4 px-6 text-center">
+                <span class="bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400 px-3 py-1 rounded-full text-[9px] uppercase font-black tracking-wider border border-transparent">
+                  EXPIRING SOON
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="expiringWarranties().length === 0">
+              <td colspan="5" class="py-8 text-center text-slate-400 italic">No warranties expiring in the next 30 days.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMCs Panel -->
+  <div *ngIf="!loading() && activeTab() === 'amcs'" class="glass-panel rounded-[2rem] border shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs sm:text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 uppercase text-[9px] font-black tracking-widest border-b dark:border-slate-800">
+          <tr>
+            <th class="py-4 px-6">Customer / Client</th>
+            <th class="py-4 px-6">Covered Device(s)</th>
+            <th class="py-4 px-6">Contract Period</th>
+            <th class="py-4 px-6 text-right">Value (₹)</th>
+            <th class="py-4 px-6 text-center">Status</th>
+            <th class="py-4 px-6 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-700 dark:text-slate-355">
+          <tr *ngFor="let a of amcs()" class="hover:bg-slate-50/50 dark:hover:bg-slate-950/20">
+            <td class="py-4 px-6">
+              <div class="font-bold text-slate-850 dark:text-slate-200">{{ a.customerName }}</div>
+              <div class="text-[10px] text-slate-400">{{ a.customerEmail }} | {{ a.customerPhone }}</div>
+            </td>
+            <td class="py-4 px-6 font-medium">{{ a.device }}</td>
+            <td class="py-4 px-6">
+              <span class="text-xs block">{{ a.startDate | date:'shortDate' }} to {{ a.endDate | date:'shortDate' }}</span>
+              <span *ngIf="!isAmcActive(a)" class="text-[9px] text-rose-500 uppercase font-black tracking-wider">Expired contract</span>
+            </td>
+            <td class="py-4 px-6 text-right font-black text-slate-800 dark:text-white font-mono">₹{{ a.contractValue.toLocaleString('en-IN') }}</td>
+            <td class="py-4 px-6 text-center">
+              <span 
+                [ngClass]="isAmcActive(a) ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400'"
+                class="px-3 py-1 rounded-full text-[9px] uppercase font-black tracking-wider border border-transparent"
+              >
+                {{ isAmcActive(a) ? 'ACTIVE' : 'EXPIRED' }}
+              </span>
+            </td>
+            <td class="py-4 px-6 text-right">
+              <div class="flex items-center justify-end space-x-2.5">
+                <button 
+                  (click)="openServiceAmc(a)"
+                  class="bg-slate-900 hover:bg-blue-600 text-white dark:bg-slate-800 dark:hover:bg-amber-500 dark:hover:text-blue-950 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                >
+                  Logs
+                </button>
+                <button 
+                  (click)="openRenewAmc(a)"
+                  class="bg-blue-600 hover:bg-blue-700 text-white dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer"
+                >
+                  Renew
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="amcs().length === 0">
+            <td colspan="6" class="py-8 text-center text-slate-400 italic">No active Annual Maintenance Contracts found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODALS
+       ========================================== -->
+
+  <!-- Register Warranty Modal -->
+  <div *ngIf="showRegisterModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-[2.5rem] shadow-2xl max-w-md w-full space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b dark:border-slate-800">
+        <h3 class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider font-extrabold">Register Hardware Warranty</h3>
+        <button (click)="showRegisterModal.set(false)" class="text-slate-400 hover:text-slate-500 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Select Product Part</label>
+          <select [(ngModel)]="registerForm.productId" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+            <option value="">-- Select Hardware Item --</option>
+            <option *ngFor="let p of products()" [value]="p.id">{{ p.name }} ({{ p.sku }})</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Serial Code Number</label>
+          <input type="text" [(ngModel)]="registerForm.serialNumber" placeholder="e.g. SN-L1098..." class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-850 dark:text-slate-100 uppercase font-mono font-bold" />
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Customer Name</label>
+          <input type="text" [(ngModel)]="registerForm.customerName" placeholder="Client Name" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Email Address</label>
+            <input type="email" [(ngModel)]="registerForm.customerEmail" placeholder="client@example.com" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+          </div>
+          <div class="space-y-1">
+            <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Mobile Number</label>
+            <input type="text" [(ngModel)]="registerForm.customerPhone" placeholder="Mobile" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Warranty Duration (Months)</label>
+          <input type="number" [(ngModel)]="registerForm.durationMonths" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-850 dark:text-slate-100 font-bold" />
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3 pt-2">
+        <button (click)="registerWarranty()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 py-3 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer font-bold">
+          Register Support
+        </button>
+        <button (click)="showRegisterModal.set(false)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:text-slate-400 py-3 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create AMC Modal -->
+  <div *ngIf="showAmcModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-[2.5rem] shadow-2xl max-w-md w-full space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b dark:border-slate-800">
+        <h3 class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider font-extrabold">Register AMC Contract</h3>
+        <button (click)="showAmcModal.set(false)" class="text-slate-400 hover:text-slate-500 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Client Business Name</label>
+          <input type="text" [(ngModel)]="amcForm.customerName" placeholder="e.g. ABC Tech Park Ltd." class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Email Address</label>
+            <input type="email" [(ngModel)]="amcForm.customerEmail" placeholder="client@example.com" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+          </div>
+          <div class="space-y-1">
+            <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Mobile Number</label>
+            <input type="text" [(ngModel)]="amcForm.customerPhone" placeholder="Mobile" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Covered Device / Scope</label>
+          <input type="text" [(ngModel)]="amcForm.device" placeholder="e.g. 50x Office Desktops & Printers support" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Start Date</label>
+            <input type="date" [(ngModel)]="amcForm.startDate" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+          </div>
+          <div class="space-y-1">
+            <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">End Date</label>
+            <input type="date" [(ngModel)]="amcForm.endDate" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">Contract Value (₹)</label>
+          <input type="number" [(ngModel)]="amcForm.contractValue" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-850 dark:text-slate-100 font-bold" />
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3 pt-2">
+        <button (click)="registerAmc()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 py-3 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer font-bold">
+          Register AMC
+        </button>
+        <button (click)="showAmcModal.set(false)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:text-slate-400 py-3 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMC Service History Modal -->
+  <div *ngIf="showServiceModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-[2.5rem] shadow-2xl max-w-2xl w-full space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b dark:border-slate-800">
+        <div>
+          <h3 class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider font-extrabold">AMC Service History Logs</h3>
+          <p class="text-[9px] text-slate-400 font-semibold uppercase">Client: {{ selectedAmc()?.customerName }}</p>
+        </div>
+        <button (click)="showServiceModal.set(false)" class="text-slate-400 hover:text-slate-500 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
+        <!-- Add Service Log Notes -->
+        <div class="md:col-span-1 bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border dark:border-slate-850 space-y-3 h-fit">
+          <h4 class="font-black text-[10px] text-slate-800 dark:text-slate-100 uppercase tracking-wider">Log Maintenance Visit</h4>
+          <div class="space-y-1">
+            <label class="text-[8px] font-black uppercase text-slate-400">Activity Notes / Findings</label>
+            <textarea [(ngModel)]="serviceNote" rows="4" placeholder="e.g. Cleaned CPU vents, re-applied thermal paste..." class="w-full p-2.5 border rounded-xl dark:border-slate-800 dark:bg-slate-900 text-slate-850 dark:text-slate-100 text-xs"></textarea>
+          </div>
+          <button (click)="addServiceLog()" class="w-full bg-slate-900 hover:bg-emerald-600 text-white dark:bg-slate-800 dark:hover:bg-amber-500 dark:hover:text-blue-950 py-3 rounded-xl text-[9px] font-black uppercase tracking-wider cursor-pointer font-bold">
+            Record Visit
+          </button>
+        </div>
+
+        <!-- Service Logs List -->
+        <div class="md:col-span-2 border dark:border-slate-800 rounded-2xl overflow-y-auto max-h-80 scrollbar-thin p-4 space-y-3">
+          <h4 class="font-black text-[10px] text-slate-400 dark:text-slate-550 uppercase tracking-wider mb-2">Previous Support Activity</h4>
+          
+          <div *ngFor="let log of serviceHistoryList()" class="p-3 bg-slate-50 dark:bg-slate-950 border dark:border-slate-850 rounded-xl space-y-1">
+            <div class="flex justify-between text-[9px] text-slate-400 font-mono">
+              <span>Date: {{ log.date | date:'short' }}</span>
+              <span>By: {{ log.author }}</span>
+            </div>
+            <p class="font-semibold text-slate-700 dark:text-slate-300 leading-relaxed text-xs">{{ log.note }}</p>
+          </div>
+
+          <div *ngIf="serviceHistoryList().length === 0" class="h-32 flex items-center justify-center text-slate-400 italic">
+            No support visits recorded for this contract yet.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Renew AMC Modal -->
+  <div *ngIf="showRenewModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-[2.5rem] shadow-2xl max-w-sm w-full space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b dark:border-slate-800">
+        <div>
+          <h3 class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider font-extrabold">Renew AMC Agreement</h3>
+          <p class="text-[9px] text-slate-400 font-semibold uppercase">Client: {{ selectedAmc()?.customerName }}</p>
+        </div>
+        <button (click)="showRenewModal.set(false)" class="text-slate-400 hover:text-slate-500 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">New Agreement End Date</label>
+          <input type="date" [(ngModel)]="renewForm.endDate" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-800 dark:text-slate-100" />
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-slate-450 uppercase text-[9px] tracking-wider">New Agreement Value (₹)</label>
+          <input type="number" [(ngModel)]="renewForm.contractValue" class="w-full p-3 border rounded-xl dark:border-slate-800 dark:bg-slate-950 text-slate-850 dark:text-slate-100 font-bold" />
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3 pt-2">
+        <button (click)="renewAmc()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 py-3 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer font-bold">
+          Confirm Renewal
+        </button>
+        <button (click)="showRenewModal.set(false)" class="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:text-slate-400 py-3 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

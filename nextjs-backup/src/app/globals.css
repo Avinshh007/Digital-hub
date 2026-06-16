@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --primary: #1e40af; /* Premium Royal Blue */
+  --primary-hover: #1e3a8a;
+  --accent: #f59e0b; /* Golden Amber */
+  --accent-hover: #d97706;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --muted-background: #f1f5f9;
+}
+
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary-brand: var(--primary);
+  --color-primary-brand-hover: var(--primary-hover);
+  --color-accent-brand: var(--accent);
+  --color-accent-brand-hover: var(--accent-hover);
+  --color-border-brand: var(--border);
+  --color-muted-brand: var(--muted);
+  --color-muted-background-brand: var(--muted-background);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), sans-serif;
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+}
+
+/* Custom print layouts for invoices */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-card {
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
+
+/* Chrome/Safari Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Fade-In and Slide Animations */
+.animate-fade-in {
+  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.glass-nav {
+  backdrop-filter: blur(12px);
+  background-color: rgba(248, 250, 252, 0.85);
+}
+
+

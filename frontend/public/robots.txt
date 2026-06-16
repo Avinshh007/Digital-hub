@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /products
+Allow: /pc-builder
+Allow: /services/book
+
+Disallow: /admin/
+Disallow: /profile/
+Disallow: /checkout/
+Disallow: /api/
+
+Sitemap: http://localhost:3001/sitemap.xml

@@ -1,0 +1,477 @@
+<div class="min-h-screen bg-transparent pt-24 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <!-- Title header -->
+    <div class="border-b border-slate-200 dark:border-slate-800/80 pb-4 mb-8">
+      <h1 class="text-3xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+        My Account
+      </h1>
+      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 uppercase font-semibold tracking-wider">
+        Manage profile details, shipping addresses, track order logs, repair bookings, and quote replies
+      </p>
+    </div>
+
+    <!-- Layout Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      
+      <!-- Side Tab Navigation -->
+      <aside class="space-y-4 lg:col-span-1">
+        <div class="glass-panel p-6 rounded-[2.5rem] shadow-sm relative overflow-hidden space-y-4">
+          <div class="flex items-center space-x-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+            <div class="p-3 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="truncate max-w-[150px]">
+              <h4 class="text-sm font-black text-slate-850 dark:text-slate-200 leading-none truncate">{{ user()?.name }}</h4>
+              <span class="text-[9px] font-black uppercase text-indigo-500 mt-1 block">{{ user()?.role }} Member</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col space-y-2 text-xs font-black uppercase tracking-wider">
+            <button (click)="setTab('orders')" [ngClass]="activeTab() === 'orders' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60'" class="w-full text-left py-3 px-4 rounded-2xl transition-all cursor-pointer">
+              Order History
+            </button>
+            <button (click)="setTab('services')" [ngClass]="activeTab() === 'services' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60'" class="w-full text-left py-3 px-4 rounded-2xl transition-all cursor-pointer">
+              Repair Bookings
+            </button>
+            <button (click)="setTab('quotes')" [ngClass]="activeTab() === 'quotes' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60'" class="w-full text-left py-3 px-4 rounded-2xl transition-all cursor-pointer">
+              My Quote Requests
+            </button>
+            <button (click)="setTab('addresses')" [ngClass]="activeTab() === 'addresses' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60'" class="w-full text-left py-3 px-4 rounded-2xl transition-all cursor-pointer">
+              Manage Addresses
+            </button>
+            <button (click)="setTab('details')" [ngClass]="activeTab() === 'details' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60'" class="w-full text-left py-3 px-4 rounded-2xl transition-all cursor-pointer">
+              Settings & Password
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Tabs Content -->
+      <main class="lg:col-span-3 space-y-6">
+        
+        <!-- ==================== ORDERS TAB ==================== -->
+        <ng-container *ngIf="activeTab() === 'orders'">
+          <h2 class="text-xl font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">Purchase History</h2>
+          
+          <div *ngIf="loadingOrders()" class="h-64 flex flex-col items-center justify-center space-y-3">
+            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-[10px] text-slate-400 font-extrabold tracking-widest uppercase">Loading Purchase logs...</span>
+          </div>
+
+          <div *ngIf="!loadingOrders() && orders().length === 0" class="glass-panel p-12 text-center space-y-4">
+            <h3 class="text-base font-black text-slate-700 dark:text-slate-300 uppercase">No purchases found</h3>
+            <a routerLink="/products" class="inline-block px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-md">Start Shopping</a>
+          </div>
+
+          <div *ngIf="!loadingOrders() && orders().length > 0" class="space-y-4">
+            <div *ngFor="let order of orders()" class="glass-panel rounded-3xl overflow-hidden shadow-xs hover:border-slate-350 dark:hover:border-slate-750 transition-all border border-slate-200/60 bg-white/40 dark:bg-slate-900/40">
+              
+              <!-- Order Header summary -->
+              <div (click)="toggleOrderDetails(order.id)" class="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer select-none hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
+                <div class="flex items-center space-x-3.5">
+                  <div class="p-2 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                  </div>
+                  <div>
+                    <span class="block font-mono font-bold text-slate-850 dark:text-slate-100 text-sm">#{{ order.id.slice(0, 8).toUpperCase() }}</span>
+                    <span class="block text-[9px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5">{{ order.createdAt | date:'mediumDate' }}</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-4 text-xs font-black uppercase tracking-wider">
+                  <div>
+                    <span class="text-slate-400 dark:text-slate-500 block text-[9px] font-bold">Total price</span>
+                    <span class="text-slate-800 dark:text-slate-200">₹{{ order.totalAmount.toLocaleString('en-IN') }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-400 dark:text-slate-500 block text-[9px] font-bold">Status</span>
+                    <span [ngClass]="{
+                      'text-indigo-600 dark:text-indigo-400': order.status === 'SHIPPED' || order.status === 'PACKED' || order.status === 'CONFIRMED',
+                      'text-emerald-600 dark:text-emerald-400': order.status === 'DELIVERED',
+                      'text-amber-500': order.status === 'PENDING',
+                      'text-rose-500': order.status === 'CANCELLED'
+                    }">{{ order.status }}</span>
+                  </div>
+                  <svg [ngClass]="expandedOrderId() === order.id ? 'rotate-180' : ''" class="w-4 h-4 text-slate-400 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
+
+              <!-- Expanded Order Details pane -->
+              <div *ngIf="expandedOrderId() === order.id" class="border-t border-slate-100 dark:border-slate-850 p-6 bg-slate-50/20 dark:bg-slate-950/20 space-y-6">
+                
+                <!-- VISUAL TRACKING TIMELINE PROGRESS BAR -->
+                <div class="py-4">
+                  <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-6 text-center">Order Tracking Timeline</span>
+                  
+                  <div class="flex items-center justify-between max-w-lg mx-auto relative">
+                    <!-- Progress bar line -->
+                    <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-800 -z-10 rounded-full"></div>
+                    <div [ngStyle]="{
+                      'width': order.status === 'DELIVERED' ? '100%' :
+                               order.status === 'SHIPPED' ? '75%' :
+                               order.status === 'PACKED' ? '50%' :
+                               order.status === 'CONFIRMED' ? '25%' : '0%'
+                    }" class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-indigo-600 dark:bg-brand-gold -z-10 rounded-full transition-all duration-700"></div>
+
+                    <!-- Steps nodes -->
+                    <div class="flex flex-col items-center space-y-2">
+                      <div [ngClass]="order.status !== 'CANCELLED' ? 'bg-indigo-600 dark:bg-brand-gold text-white' : 'bg-slate-300 dark:bg-slate-700'" class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shadow-md">✓</div>
+                      <span class="text-[8px] font-black uppercase text-slate-400">Placed</span>
+                    </div>
+
+                    <div class="flex flex-col items-center space-y-2">
+                      <div [ngClass]="order.status === 'CONFIRMED' || order.status === 'PACKED' || order.status === 'SHIPPED' || order.status === 'DELIVERED' ? 'bg-indigo-600 dark:bg-brand-gold text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'" class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all">2</div>
+                      <span class="text-[8px] font-black uppercase text-slate-400">Packed</span>
+                    </div>
+
+                    <div class="flex flex-col items-center space-y-2">
+                      <div [ngClass]="order.status === 'SHIPPED' || order.status === 'DELIVERED' ? 'bg-indigo-600 dark:bg-brand-gold text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'" class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all">3</div>
+                      <span class="text-[8px] font-black uppercase text-slate-400">Shipped</span>
+                    </div>
+
+                    <div class="flex flex-col items-center space-y-2">
+                      <div [ngClass]="order.status === 'DELIVERED' ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'" class="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all">✓</div>
+                      <span class="text-[8px] font-black uppercase text-slate-400">Delivered</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Grid Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest pt-4">
+                  <div>
+                    <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 block mb-1">Delivered to</span>
+                    <span class="text-slate-700 dark:text-slate-200 block font-bold">{{ getAddressField(order.shippingAddress, 'fullName') }}</span>
+                    <span class="text-slate-600 dark:text-slate-350 block text-[10px] lowercase pt-0.5 leading-relaxed">{{ getAddressField(order.shippingAddress, 'street') }}, {{ getAddressField(order.shippingAddress, 'city') }} - {{ getAddressField(order.shippingAddress, 'pinCode') }}, {{ getAddressField(order.shippingAddress, 'state') }}</span>
+                    <span class="block pt-1">Phone: {{ getAddressField(order.shippingAddress, 'phone') }}</span>
+                  </div>
+                  
+                  <div>
+                    <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 block mb-1.5">Payment details</span>
+                    <span>Method: <strong class="text-slate-700 dark:text-slate-200">{{ order.paymentMethod }}</strong></span><br/>
+                    <span>Status: <strong class="text-emerald-600 dark:text-emerald-400">{{ order.paymentStatus }}</strong></span><br/>
+                    <span *ngIf="order.trackingNumber" class="block pt-1 text-slate-850 dark:text-slate-250">Logistics Track: <strong>{{ order.trackingNumber }}</strong></span>
+                  </div>
+                </div>
+
+                <!-- Product items list -->
+                <div class="border-t border-slate-100 dark:border-slate-850 pt-4">
+                  <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-3">Items list</span>
+                  <div class="space-y-2.5">
+                    <div *ngFor="let item of order.items" class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                      <div class="flex items-center space-x-2.5">
+                        <span class="text-slate-850 dark:text-slate-200">{{ item.product?.name }}</span>
+                        <span class="text-slate-400 dark:text-slate-500 text-[10px]">x {{ item.quantity }}</span>
+                      </div>
+                      <span class="text-slate-950 dark:text-slate-100 font-bold">₹{{ (item.price * item.quantity).toLocaleString('en-IN') }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Printable Invoice download -->
+                <div class="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-850">
+                  <a [href]="getInvoiceDownloadUrl(order.id)" class="inline-flex items-center space-x-1.5 text-xs font-black text-indigo-650 dark:text-indigo-400 hover:underline">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    <span>Download GST Invoice PDF</span>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ==================== SERVICES TAB ==================== -->
+        <ng-container *ngIf="activeTab() === 'services'">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">Computer Repair Bookings</h2>
+            <a routerLink="/services/book" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-sm">Book Service</a>
+          </div>
+
+          <div *ngIf="loadingBookings()" class="h-64 flex flex-col items-center justify-center space-y-3">
+            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-[10px] text-slate-400 font-extrabold tracking-widest uppercase">Fetching service logs...</span>
+          </div>
+
+          <div *ngIf="!loadingBookings() && bookings().length === 0" class="glass-panel p-12 text-center space-y-4">
+            <h3 class="text-base font-black text-slate-700 dark:text-slate-300 uppercase">No repair bookings found</h3>
+            <a routerLink="/services/book" class="inline-block px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-full">Book First Repair</a>
+          </div>
+
+          <div *ngIf="!loadingBookings() && bookings().length > 0" class="space-y-4 animate-fade-in">
+            <div *ngFor="let book of bookings()" class="glass-panel p-6 rounded-3xl border border-slate-200/60 bg-white/40 dark:bg-slate-900/40 space-y-4">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h4 class="text-sm font-black text-slate-850 dark:text-slate-100 uppercase">{{ book.deviceType }} Repair</h4>
+                  <span class="text-[9px] font-mono text-slate-400 uppercase font-semibold block mt-0.5">Booking ID: #SB-{{ book.id.slice(0,8).toUpperCase() }}</span>
+                </div>
+                <span [ngClass]="{
+                  'bg-amber-100 text-amber-800 border-amber-200': book.status === 'SUBMITTED',
+                  'bg-blue-100 text-blue-800 border-blue-200': book.status === 'IN_PROGRESS',
+                  'bg-emerald-100 text-emerald-800 border-emerald-200': book.status === 'COMPLETED'
+                }" class="text-[9px] font-black uppercase border px-2.5 py-0.5 rounded">
+                  {{ book.status }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-slate-350 leading-relaxed font-semibold italic">"{{ book.problemDescription }}"</p>
+              
+              <div class="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-wrap gap-x-8 gap-y-1 text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                <span>Preferred Date: <strong class="text-slate-650 dark:text-slate-300 font-mono">{{ book.preferredDate | date:'mediumDate' }}</strong></span>
+                <span>Contact Phone: <strong class="text-slate-650 dark:text-slate-300">{{ book.mobileNumber }}</strong></span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ==================== QUOTES TAB ==================== -->
+        <ng-container *ngIf="activeTab() === 'quotes'">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">Custom Quotation Requests</h2>
+            <a routerLink="/request-quote" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-sm">Request Quote</a>
+          </div>
+
+          <div *ngIf="loadingQuotes()" class="h-64 flex flex-col items-center justify-center space-y-3">
+            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-[10px] text-slate-400 font-extrabold tracking-widest uppercase">Fetching quote history...</span>
+          </div>
+
+          <div *ngIf="!loadingQuotes() && quotes().length === 0" class="glass-panel p-12 text-center space-y-4">
+            <h3 class="text-base font-black text-slate-700 dark:text-slate-300 uppercase">No quote inquiries found</h3>
+            <a routerLink="/request-quote" class="inline-block px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-full">Request First Quote</a>
+          </div>
+
+          <div *ngIf="!loadingQuotes() && quotes().length > 0" class="space-y-4 animate-fade-in">
+            <div *ngFor="let quote of quotes()" class="glass-panel p-6 rounded-3xl border border-slate-200/60 bg-white/40 dark:bg-slate-900/40 space-y-4">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h4 class="text-sm font-black text-slate-850 dark:text-slate-100 uppercase">Custom Hardware Quote</h4>
+                  <span class="text-[9px] font-mono text-slate-400 uppercase font-semibold block mt-0.5">Reference: #QT-${{ quote.id.slice(0,8).toUpperCase() }}</span>
+                </div>
+                <span [ngClass]="{
+                  'bg-amber-100 text-amber-800 border-amber-200': quote.status === 'PENDING',
+                  'bg-emerald-100 text-emerald-800 border-emerald-200': quote.status === 'RESPONDED',
+                  'bg-slate-100 text-slate-800 border-slate-200': quote.status === 'CLOSED'
+                }" class="text-[9px] font-black uppercase border px-2.5 py-0.5 rounded">
+                  {{ quote.status }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-slate-350 leading-relaxed font-semibold">"{{ quote.requirements }}"</p>
+              
+              <div *ngIf="quote.customPricing" class="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-300">
+                <span class="text-slate-400 block text-[9px] uppercase tracking-wider mb-0.5">Admin Custom Pricing Offer</span>
+                <span>Grand Total Offered: <strong class="text-emerald-600 text-sm">₹{{ quote.customPricing.toLocaleString('en-IN') }}</strong></span>
+              </div>
+
+              <div *ngIf="quote.documentUrl" class="text-[9px] font-black uppercase tracking-wider">
+                <a [href]="quote.documentUrl" target="_blank" class="text-indigo-650 hover:underline">View Spec Document link</a>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ==================== ADDRESSES TAB ==================== -->
+        <ng-container *ngIf="activeTab() === 'addresses'">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">Saved Shipping Addresses</h2>
+            <button *ngIf="!addressFormOpen()" (click)="openNewAddressForm()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-sm cursor-pointer">
+              Add New Address
+            </button>
+          </div>
+
+          <!-- Address Form Pane -->
+          <div *ngIf="addressFormOpen()" class="glass-panel p-6 rounded-3xl border-2 border-indigo-400/30 bg-slate-50/40 dark:bg-slate-950/20 space-y-6 mb-8 animate-fade-in">
+            <h3 class="text-base font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">{{ editAddressMode() ? 'Edit' : 'Add New' }} Shipping Address</h3>
+            
+            <form (submit)="handleSaveAddress($event)" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Full Name</label>
+                  <input type="text" [(ngModel)]="fullName" name="fullName" required placeholder="e.g. Avinash" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">10-Digit Mobile Phone</label>
+                  <input type="tel" [(ngModel)]="phone" name="phone" required placeholder="10-digit phone" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Alternate Phone (Optional)</label>
+                  <input type="tel" [(ngModel)]="alternatePhone" name="alternatePhone" placeholder="Alternate phone" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">House / Flat / Building No.</label>
+                  <input type="text" [(ngModel)]="houseNumber" name="houseNumber" required placeholder="House number" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Street Address / Area</label>
+                <input type="text" [(ngModel)]="street" name="street" required placeholder="Street / Colony / Landmark detail" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div class="sm:col-span-2">
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Landmark (Optional)</label>
+                  <input type="text" [(ngModel)]="landmark" name="landmark" placeholder="Nearby landmark" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">City</label>
+                  <input type="text" [(ngModel)]="city" name="city" required placeholder="City name" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">State</label>
+                  <input type="text" [(ngModel)]="state" name="state" required placeholder="State" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">6-Digit PIN Code</label>
+                  <input type="text" [(ngModel)]="pinCode" name="pinCode" required placeholder="6-digit pincode" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div class="flex items-center pt-5">
+                  <label class="flex items-center space-x-2 text-[10px] font-black uppercase text-slate-500 cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="isDefaultAddress" name="isDefaultAddress" class="rounded border-slate-350 text-indigo-600 focus:ring-indigo-500 bg-transparent" />
+                    <span>Set as Default Address</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-3 pt-4 border-t border-slate-100 dark:border-slate-85">
+                <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-md cursor-pointer">
+                  Save Address
+                </button>
+                <button type="button" (click)="closeAddressForm()" class="px-6 py-2 border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60 text-[10px] font-black uppercase tracking-wider rounded-full cursor-pointer">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div *ngIf="loadingAddresses()" class="h-64 flex flex-col items-center justify-center space-y-3">
+            <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-[10px] text-slate-400 font-extrabold tracking-widest uppercase">Fetching addresses...</span>
+          </div>
+
+          <div *ngIf="!loadingAddresses() && addresses().length === 0 && !addressFormOpen()" class="glass-panel p-12 text-center space-y-4">
+            <h3 class="text-base font-black text-slate-700 dark:text-slate-300 uppercase">No saved addresses found</h3>
+            <button (click)="openNewAddressForm()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-md cursor-pointer">Add Address</button>
+          </div>
+
+          <div *ngIf="!loadingAddresses() && addresses().length > 0 && !addressFormOpen()" class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+            <div *ngFor="let addr of addresses()" [ngClass]="addr.isDefault ? 'border-2 border-indigo-500' : 'border border-slate-200/60'" class="glass-panel p-6 rounded-3xl relative flex flex-col justify-between">
+              
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-black text-slate-850 dark:text-slate-100 uppercase">{{ addr.fullName }}</h4>
+                  <span *ngIf="addr.isDefault" class="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded text-indigo-600">Default</span>
+                </div>
+                
+                <div class="text-xs text-slate-600 dark:text-slate-350 leading-relaxed font-semibold">
+                  <span class="block">Flat/House: {{ addr.houseNumber }}</span>
+                  <span class="block">Street: {{ addr.street }}</span>
+                  <span *ngIf="addr.landmark" class="block">Landmark: {{ addr.landmark }}</span>
+                  <span class="block">{{ addr.city }}, {{ addr.state }} - {{ addr.pinCode }}</span>
+                  <span class="block pt-1">Phone: {{ addr.phone }}</span>
+                  <span *ngIf="addr.alternatePhone" class="block">Alt Phone: {{ addr.alternatePhone }}</span>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-2 pt-4 mt-6 border-t border-slate-100 dark:border-slate-85 text-[10px] font-black uppercase tracking-wider">
+                <button (click)="openEditAddressForm(addr)" class="text-indigo-650 hover:underline cursor-pointer">Edit</button>
+                <span class="text-slate-300">|</span>
+                <button (click)="handleDeleteAddress(addr.id)" class="text-rose-500 hover:underline cursor-pointer">Delete</button>
+                <span *ngIf="!addr.isDefault" class="text-slate-300">|</span>
+                <button *ngIf="!addr.isDefault" (click)="handleSetDefaultAddress(addr.id)" class="text-slate-500 hover:text-slate-700 cursor-pointer">Set Default</button>
+              </div>
+
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ==================== DETAILS TAB ==================== -->
+        <ng-container *ngIf="activeTab() === 'details'">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Edit Profile Details Card -->
+            <div class="glass-panel p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/60 bg-white/40 dark:bg-slate-900/40 space-y-6">
+              <h3 class="text-base font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">Edit Profile Info</h3>
+              
+              <!-- Messages -->
+              <div *ngIf="editProfileSuccess()" class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-400 p-4 rounded-xl text-xs font-semibold animate-fade-in">
+                {{ editProfileSuccess() }}
+              </div>
+              <div *ngIf="editProfileError()" class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-xs font-semibold animate-fade-in">
+                {{ editProfileError() }}
+              </div>
+
+              <form (submit)="handleUpdateProfile($event)" class="space-y-4">
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Full Name</label>
+                  <input type="text" [(ngModel)]="profileName" name="profileName" required class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2.5 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Email Address</label>
+                  <input type="email" [(ngModel)]="profileEmail" name="profileEmail" required class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-855 rounded-xl py-2.5 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-md cursor-pointer">
+                  Update Profile Details
+                </button>
+              </form>
+            </div>
+
+            <!-- Change Password Card -->
+            <div class="glass-panel p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/60 bg-white/40 dark:bg-slate-900/40 space-y-6">
+              <h3 class="text-base font-black text-slate-850 dark:text-slate-100 uppercase tracking-tight">Change Password</h3>
+              
+              <!-- Messages -->
+              <div *ngIf="changePasswordSuccess()" class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-400 p-4 rounded-xl text-xs font-semibold animate-fade-in">
+                {{ changePasswordSuccess() }}
+              </div>
+              <div *ngIf="changePasswordError()" class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 p-4 rounded-xl text-xs font-semibold animate-fade-in">
+                {{ changePasswordError() }}
+              </div>
+
+              <form (submit)="handleUpdatePassword($event)" class="space-y-4">
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Current Password</label>
+                  <input type="password" [(ngModel)]="currentPassword" name="currentPassword" required placeholder="Current password" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl py-2.5 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">New Password</label>
+                  <input type="password" [(ngModel)]="newPassword" name="newPassword" required placeholder="At least 6 characters" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-855 rounded-xl py-2.5 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-450 uppercase mb-1">Confirm New Password</label>
+                  <input type="password" [(ngModel)]="confirmPassword" name="confirmPassword" required placeholder="Confirm new password" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-855 rounded-xl py-2.5 px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100" />
+                </div>
+
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-md cursor-pointer">
+                  Change Password
+                </button>
+              </form>
+            </div>
+
+          </div>
+        </ng-container>
+
+      </main>
+    </div>
+
+  </div>
+</div>

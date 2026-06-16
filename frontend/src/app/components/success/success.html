@@ -1,0 +1,161 @@
+<div class="min-h-screen bg-transparent pt-24 pb-16">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="h-96 flex flex-col items-center justify-center space-y-3">
+      <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="text-xs text-slate-400 font-extrabold tracking-widest uppercase">Fetching Invoice...</span>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="!loading() && error()" class="bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 rounded-2xl p-6 text-center max-w-md mx-auto space-y-3">
+      <h3 class="font-black uppercase tracking-tight text-sm">Error Loading Invoice</h3>
+      <p class="text-xs font-semibold text-rose-500">{{ error() }}</p>
+      <a routerLink="/" class="inline-block text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-wide">Back to Home</a>
+    </div>
+
+    <!-- Success Invoice Panel -->
+    <div *ngIf="!loading() && order()" class="space-y-8 animate-fade-in">
+      
+      <!-- Top banner alert (hide on print) -->
+      <div class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 p-6 rounded-[2rem] text-center space-y-3 no-print shadow-sm">
+        <div class="p-3 bg-emerald-500 text-white rounded-full w-fit mx-auto shadow-md">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h2 class="text-lg font-black uppercase tracking-tight">{{ t().orderSuccess }}</h2>
+        <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 leading-relaxed max-w-md mx-auto">
+          Thank you for choosing Sri Pavan Computers! Your order is being processed, and standard GST invoice copies are logged below.
+        </p>
+      </div>
+
+      <!-- Printable Invoice Sheet -->
+      <div class="glass-panel border-2 border-slate-200/50 dark:border-slate-800 p-8 sm:p-12 rounded-[2.5rem] shadow-xl relative print-card overflow-hidden bg-white dark:bg-slate-900/80">
+        
+        <!-- Watermark / Accents -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-bl-full pointer-events-none"></div>
+
+        <!-- Invoice Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start gap-6 border-b border-slate-100 dark:border-slate-800/80 pb-8">
+          <div class="space-y-2">
+            <h1 class="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Sri Pavan Computers</h1>
+            <p class="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider leading-relaxed">
+              Krishna Kanth Plaza, R R Road, Kakinada, AP - 533001<br/>
+              Phone: +91 98482 57578 | GSTIN: 37AAAAA0000A1Z0 (Sample)
+            </p>
+          </div>
+
+          <div class="text-right sm:text-right space-y-1">
+            <span class="inline-block bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-800/80 text-indigo-700 dark:text-indigo-300 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded">
+              GST INVOICE
+            </span>
+            <h2 class="text-sm font-mono font-bold text-slate-800 dark:text-slate-200 pt-1">#{{ order()!.id.slice(0, 8).toUpperCase() }}</h2>
+            <span class="block text-[10px] text-slate-400 dark:text-slate-500 font-semibold">
+              Date: {{ order()!.createdAt | date:'dd/MM/yyyy, hh:mm a' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Address Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-b border-slate-100 dark:border-slate-800/80">
+          <!-- Billed to (Client details) -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Billed To</span>
+            <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-relaxed">
+              <span class="font-extrabold text-slate-800 dark:text-slate-100 text-sm block">{{ parsedAddress()?.fullName }}</span>
+              <span>Phone: {{ parsedAddress()?.phone }}</span><br/>
+              <span>Email: {{ order()!.user?.email || 'N/A' }}</span>
+            </div>
+          </div>
+
+          <!-- Shipped to (Delivery details) -->
+          <div class="space-y-2">
+            <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Shipping Address</span>
+            <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-relaxed">
+              <span>{{ parsedAddress()?.street }}</span><br/>
+              <span>{{ parsedAddress()?.city }} - {{ parsedAddress()?.pinCode }}</span><br/>
+              <span>{{ parsedAddress()?.state }}, India</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="py-8">
+          <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-4">Itemized Particulars</span>
+          
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase">
+                <th class="pb-3 w-1/2">Product Description</th>
+                <th class="pb-3 text-center">Qty</th>
+                <th class="pb-3 text-right">Unit Price</th>
+                <th class="pb-3 text-right">GST Rate</th>
+                <th class="pb-3 text-right">Total Price</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80 font-semibold text-slate-700 dark:text-slate-300">
+              <tr *ngFor="let item of order()!.items" class="hover:bg-slate-50/20 dark:hover:bg-slate-900/10">
+                <td class="py-4 pr-4">
+                  <span class="font-extrabold text-slate-800 dark:text-slate-200 block leading-tight">{{ item.product?.name }}</span>
+                  <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block mt-1">SKU: {{ item.product?.sku }}</span>
+                </td>
+                <td class="py-4 text-center">{{ item.quantity }}</td>
+                <td class="py-4 text-right">₹{{ item.price.toLocaleString('en-IN') }}</td>
+                <td class="py-4 text-right">18.0%</td>
+                <td class="py-4 text-right font-black text-slate-800 dark:text-slate-100">
+                  ₹{{ (item.price * item.quantity).toLocaleString('en-IN') }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Financial Totals Summary -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-t border-slate-100 dark:border-slate-800/80">
+          <div class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider space-y-1">
+            <span>Payment Method: <strong class="text-slate-700 dark:text-slate-200">{{ order()!.paymentMethod }}</strong></span><br/>
+            <span>Payment Status: <strong [ngClass]="order()!.paymentStatus === 'COMPLETED' ? 'text-emerald-600' : 'text-amber-600'">{{ order()!.paymentStatus }}</strong></span><br/>
+            <span *ngIf="order()!.trackingNumber">Logistics Track: <strong class="text-slate-700 dark:text-slate-200">{{ order()!.trackingNumber }}</strong></span>
+          </div>
+
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest space-y-3.5 text-right sm:text-right">
+            <div class="flex justify-between max-w-[240px] ml-auto">
+              <span>Subtotal</span>
+              <span class="text-slate-800 dark:text-slate-200">₹{{ (order()!.totalAmount + order()!.discountAmount).toLocaleString('en-IN') }}</span>
+            </div>
+            
+            <div class="flex justify-between max-w-[240px] ml-auto">
+              <span>GST Included</span>
+              <span class="text-slate-800 dark:text-slate-200">₹{{ order()!.taxAmount.toLocaleString('en-IN') }}</span>
+            </div>
+
+            <div *ngIf="order()!.discountAmount > 0" class="flex justify-between max-w-[240px] ml-auto text-emerald-600">
+              <span>Discounts</span>
+              <span>- ₹{{ order()!.discountAmount.toLocaleString('en-IN') }}</span>
+            </div>
+
+            <div class="border-t border-slate-200 dark:border-slate-800 pt-4 flex justify-between max-w-[240px] ml-auto text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide">
+              <span>Grand Total</span>
+              <span class="text-indigo-600 dark:text-indigo-400 text-lg">₹{{ order()!.totalAmount.toLocaleString('en-IN') }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action buttons (hide on print) -->
+      <div class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto no-print">
+        <button (click)="printInvoice()" class="flex-1 py-3 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-black uppercase tracking-wider text-xs sm:text-sm rounded-full transition-all shadow-md cursor-pointer flex items-center justify-center space-x-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          <span>{{ t().invoice }}</span>
+        </button>
+        <a routerLink="/products" class="flex-1 py-3 bg-white dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 font-black uppercase tracking-wider text-xs sm:text-sm rounded-full transition-all shadow-sm text-center flex items-center justify-center cursor-pointer">
+          Continue Shopping
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>

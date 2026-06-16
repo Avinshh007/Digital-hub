@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ecommers_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ecommers_admin
+      POSTGRES_PASSWORD: ecommers_password_secure_2026
+      POSTGRES_DB: ecommers_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommers_app
+    restart: always
+    ports:
+      - "4000:4000"
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://ecommers_admin:ecommers_password_secure_2026@postgres:5432/ecommers_db?schema=public
+      - JWT_SECRET=sri_pavan_computers_secret_jwt_key_secure_2026
+      - PORT=3001
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

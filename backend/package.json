@@ -1,0 +1,44 @@
+{
+  "name": "ecommers-backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server/server.ts",
+  "scripts": {
+    "start": "ts-node-dev --respawn --project tsconfig.json server/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "serve": "node dist/server/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "test": "node scripts/run-tests.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "adm-zip": "^0.5.14",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "pdfkit": "^0.19.1",
+    "razorpay": "^2.9.6"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^20.17.19",
+    "@types/pdfkit": "^0.17.6",
+    "prisma": "^6.19.3",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "~6.0.2"
+  }
+}

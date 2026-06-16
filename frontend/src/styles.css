@@ -1,0 +1,200 @@
+/* src/styles.css */
+@import 'tailwindcss';
+
+/* Custom Theme Extension in Tailwind v4 */
+@theme {
+  --color-brand-blue: #0f4c81;
+  --color-brand-gold: #c5a880;
+  --color-brand-dark: #0b132b;
+  --color-brand-obsidian: #030712;
+}
+
+/* Enable Class-Based Dark Mode Variant in Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ==========================================================================
+   GLOBAL THEME DEFAULTS
+   ========================================================================== */
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Light Mode Background Gradient */
+body {
+  background: radial-gradient(circle at 10% 20%, rgba(240, 244, 255, 0.5) 0%, rgba(253, 251, 247, 0.5) 90%), #f8fafc;
+  color: #0f172a; /* slate-900 */
+}
+
+/* Dark Mode Background Gradient */
+html.dark body {
+  background: radial-gradient(circle at 50% 50%, #0b0f19 0%, #030712 100%);
+  color: #f1f5f9; /* slate-100 */
+}
+
+/* ==========================================================================
+   GLASSMORPHISM & PREMIUM UTILITIES
+   ========================================================================== */
+
+/* Frosted Glass Cards */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(148, 163, 184, 0.08);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Glass panel hover lift */
+.glass-panel-hover:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(99, 102, 241, 0.3); /* indigo-500/30 */
+  box-shadow: 0 20px 40px 0 rgba(99, 102, 241, 0.08);
+}
+
+html.dark .glass-panel-hover:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(245, 158, 11, 0.3); /* gold/amber-500/30 */
+  box-shadow: 0 20px 45px 0 rgba(0, 0, 0, 0.4), 0 0 20px 0 rgba(245, 158, 11, 0.05);
+}
+
+/* Glowing Neon Borders */
+.glowing-border {
+  position: relative;
+  border-radius: inherit;
+}
+
+.glowing-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(to right, #6366f1, #a855f7, #ec4899);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glowing-border:hover::before {
+  opacity: 1;
+}
+
+html.dark .glowing-border::before {
+  background: linear-gradient(to right, #f59e0b, #d97706, #3b82f6);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.4);
+}
+
+/* ==========================================================================
+   ADVANCED KEYFRAME ANIMATIONS
+   ========================================================================== */
+
+/* Floating animation */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Pulse Glow (glowing outline check for PC Builder active components) */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 5px 0 rgba(99, 102, 241, 0.2); }
+  50% { box-shadow: 0 0 20px 5px rgba(99, 102, 241, 0.4); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+html.dark .animate-pulse-glow {
+  animation: pulseGlowDark 2s infinite;
+}
+
+@keyframes pulseGlowDark {
+  0%, 100% { box-shadow: 0 0 5px 0 rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 0 20px 5px rgba(245, 158, 11, 0.55); }
+}
+
+/* Slide in animation */
+@keyframes slideInRight {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Slide down panel details */
+@keyframes slideDown {
+  from { max-height: 0; opacity: 0; overflow: hidden; }
+  to { max-height: 1000px; opacity: 1; }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Apple-style smooth page fade in on load */
+@keyframes pageFade {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-page-fade {
+  animation: pageFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Print Invoice Custom Styles */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .print-card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+}

@@ -1,0 +1,459 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  passwordHash    String
+  name            String
+  role            String           @default("CUSTOMER") // "CUSTOMER" or "ADMIN"
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  orders          Order[]
+  reviews         Review[]
+  addresses       Address[]
+  wishlist        WishlistItem[]
+  cartItems       CartItem[]
+  serviceBookings ServiceBooking[]
+  quoteRequests   QuoteRequest[]
+  notifications   Notification[]
+  savedBuilds     SavedBuild[]
+  auditLogs       AuditLog[]
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  image     String?
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Brand {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  logo      String?
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id              String               @id @default(uuid())
+  name            String
+  description     String
+  price           Float
+  originalPrice   Float
+  stock           Int
+  sku             String               @unique
+  gstRate         Float                @default(18.0) // Standard 18% GST for electronics in India
+  categoryId      String
+  category        Category             @relation(fields: [categoryId], references: [id])
+  brandId         String
+  brand           Brand                @relation(fields: [brandId], references: [id])
+  images          String               // JSON array of image paths/URLs e.g., '["/uploads/laptop1.png"]'
+  specs           String               // JSON object of tech specs e.g., '{"RAM":"16GB", "CPU":"Core i7"}'
+  rating          Float                @default(0.0)
+  ratingCount     Int                  @default(0)
+  status          String               @default("ACTIVE") // "ACTIVE", "DRAFT", "ARCHIVED"
+  subcategory     String?
+  warranty        String?
+  modelNumber     String?
+  seoTitle        String?
+  seoDescription  String?
+  source          String               @default("MANUAL") // "MANUAL" | "TALLY_IMPORT" | "EXCEL_IMPORT"
+  lockDescription Boolean              @default(false)
+  lockImages      Boolean              @default(false)
+  lockSpecs       Boolean              @default(false)
+  lockPrice       Boolean              @default(false)
+  lockStock       Boolean              @default(false)
+  lockSeo         Boolean              @default(false)
+  barcode         String?              @unique
+  lowStockThreshold Int                @default(5)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  orderItems      OrderItem[]
+  reviews         Review[]
+  wishlistItems   WishlistItem[]
+  cartItems       CartItem[]
+  serialNumbers   ProductSerialNumber[]
+  warranties      Warranty[]
+  poItems         PurchaseOrderItem[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([name])
+}
+
+model ProductSerialNumber {
+  id              String         @id @default(uuid())
+  productId       String
+  product         Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  serialNumber    String         @unique
+  purchaseDate    DateTime?
+  status          String         @default("AVAILABLE") // "AVAILABLE", "SOLD", "RESERVED"
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  warranty        Warranty?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([productId])
+  @@index([status])
+}
+
+model Warranty {
+  id              String              @id @default(uuid())
+  serialNumber    String              @unique
+  productSerial   ProductSerialNumber @relation(fields: [serialNumber], references: [serialNumber], onDelete: Cascade)
+  productId       String
+  product         Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId         String?
+  order           Order?              @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  startDate       DateTime
+  endDate         DateTime
+  status          String              @default("ACTIVE") // "ACTIVE", "EXPIRED", "CLAIMED"
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([productId])
+  @@index([serialNumber])
+}
+
+model Vendor {
+  id             String          @id @default(uuid())
+  name           String
+  contactPerson  String
+  mobile         String
+  email          String
+  gstNumber      String
+  address        String
+  purchaseOrders PurchaseOrder[]
+  ledgerEntries  VendorLedger[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model PurchaseOrder {
+  id            String              @id @default(uuid())
+  poNumber      String              @unique
+  vendorId      String
+  vendor        Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  date          DateTime            @default(now())
+  status        String              @default("DRAFT") // "DRAFT", "APPROVED", "PARTIAL", "RECEIVED", "CANCELLED"
+  items         PurchaseOrderItem[]
+  serialNumbers ProductSerialNumber[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity        Int
+  receivedQty     Int           @default(0)
+  costPrice       Float
+  gstRate         Float         @default(18.0)
+}
+
+model VendorLedger {
+  id              String   @id @default(uuid())
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  amount          Float    // Positive = Purchase bill, Negative = Payment made
+  transactionType String   // "PURCHASE", "PAYMENT"
+  reference       String?
+  createdAt       DateTime @default(now())
+
+  @@index([vendorId])
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  category    String   // "RENT", "SALARY", "ELECTRICITY", "INTERNET", "TRANSPORT", "MAINTENANCE", "MISCELLANEOUS"
+  amount      Float
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([date])
+}
+
+model AMC {
+  id             String   @id @default(uuid())
+  customerName   String
+  customerEmail  String
+  customerPhone  String
+  device         String
+  startDate      DateTime
+  endDate        DateTime
+  contractValue  Float
+  status         String   @default("ACTIVE") // "ACTIVE", "EXPIRED", "CANCELLED"
+  serviceHistory String   // JSON array string of maintenance logs
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@index([endDate])
+}
+
+model SavedBuild {
+  id            String   @id @default(uuid())
+  name          String
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  cpuId         String?
+  motherboardId String?
+  ramId         String?
+  gpuId         String?
+  storageId     String?
+  psuId         String?
+  caseId        String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userEmail String?
+  action    String   // "LOGIN", "FAILED_LOGIN", "PRICE_CHANGE", "STOCK_ADJUSTMENT", "ORDER_STATE", "ADMIN_ACTION"
+  details   String   // JSON text
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}
+
+model ImportHistory {
+  id         String   @id @default(uuid())
+  timestamp  DateTime @default(now())
+  filename   String
+  mode       String
+  source     String
+  createdCnt Int
+  updatedCnt Int
+  skippedCnt Int
+  errors     String   // JSON text array
+  rolledBack Boolean  @default(false)
+  prevStates String   // JSON text backup of modified items
+}
+
+model NotificationLog {
+  id          String   @id @default(uuid())
+  recipient   String   // Phone or Email
+  channel     String   // "WHATSAPP", "EMAIL", "SMS", "PUSH"
+  title       String
+  message     String
+  status      String   // "SENT", "FAILED", "PENDING"
+  error       String?
+  createdAt   DateTime @default(now())
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          String      @default("PENDING") // "PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"
+  totalAmount     Float
+  taxAmount       Float       // Computed GST
+  discountAmount  Float       // Applied coupon discounts
+  paymentMethod   String      // "COD" or "ONLINE"
+  paymentStatus   String      @default("PENDING") // "PENDING", "COMPLETED", "FAILED"
+  paymentId       String?
+  shippingAddress String      // JSON stringified address details
+  trackingNumber  String?
+  couponCode      String?
+  items           OrderItem[]
+  warranties      Warranty[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float   // Historical price at which user purchased
+  gstAmount Float   // Historical tax paid for this item
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userName  String
+  rating    Int      // 1 to 5
+  comment   String
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  discountType  String   // "PERCENTAGE" or "FIXED"
+  discountValue Float
+  minOrderValue Float    @default(0.0)
+  maxDiscount   Float?
+  expiresAt     DateTime
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model HomepageConfig {
+  id                 String   @id @default("singleton")
+  heroBanners        String   // JSON stringified banners list
+  featuredCategories String   // JSON stringified category slugs list
+  featuredProducts   String   // JSON stringified product IDs list
+  updatedAt          DateTime @updatedAt
+}
+
+model Address {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName       String
+  phone          String
+  alternatePhone String?
+  houseNumber    String
+  street         String
+  landmark       String?
+  city           String
+  state          String
+  pinCode        String
+  country        String   @default("India")
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+}
+
+model ServiceBooking {
+  id                 String   @id @default(uuid())
+  userId             String?
+  user               User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerName       String
+  mobileNumber       String
+  deviceType         String   // "LAPTOP" | "DESKTOP" | "PRINTER" | "NETWORKING" | "UPGRADE" | "HOMESERVICE"
+  problemDescription String
+  preferredDate      DateTime
+  status             String   @default("SUBMITTED") // "SUBMITTED" | "IN_PROGRESS" | "COMPLETED"
+  ticketNumber       String?  @unique
+  technicianName     String?
+  serviceNotes       String?
+  repairCost         Float    @default(0.0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([status])
+  @@index([ticketNumber])
+}
+
+model QuoteRequest {
+  id            String   @id @default(uuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerName  String
+  email         String
+  phone         String
+  requirements  String
+  documentUrl   String?
+  customPricing Float?
+  status        String   @default("PENDING") // "PENDING" | "RESPONDED" | "CLOSED"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model BulkOrder {
+  id               String   @id @default(uuid())
+  organizationName String
+  contactName      String
+  email            String
+  phone            String
+  quantity         Int
+  requirements     String
+  status           String   @default("PENDING") // "PENDING" | "CONTACTED" | "COMPLETED"
+  createdAt        DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?  // Null for admin alerts
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  type      String   // "ORDER" | "LOW_STOCK" | "SERVICE" | "SYSTEM"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model StockMovementLog {
+  id           String   @id @default(uuid())
+  productId    String
+  prevQuantity Int
+  newQuantity  Int
+  actionType   String   // "MANUAL_UPDATE", "TALLY_IMPORT", "EXCEL_IMPORT", "ORDER_PLACEMENT", "ORDER_CANCEL", "RESTOCK"
+  userId       String?
+  userEmail    String?
+  createdAt    DateTime @default(now())
+
+  @@index([productId])
+}

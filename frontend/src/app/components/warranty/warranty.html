@@ -1,0 +1,126 @@
+<!-- src/app/components/warranty/warranty.html -->
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 pt-24 pb-16 transition-colors duration-500">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 animate-page-fade">
+    
+    <!-- Page Title -->
+    <div class="text-center space-y-2 mb-10">
+      <h1 class="text-3xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
+        Hardware Warranty Center
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider max-w-lg mx-auto">
+        Verify the warranty coverage and support duration of your computer hardware by entering the device serial number.
+      </p>
+    </div>
+
+    <!-- Lookup Form -->
+    <div class="glass-panel p-6 sm:p-8 rounded-[2rem] shadow-lg border mb-8 max-w-xl mx-auto">
+      <div class="space-y-4">
+        <label class="block text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">
+          Hardware Serial Number
+        </label>
+        
+        <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+          <input
+            type="text"
+            [(ngModel)]="serialNumber"
+            (keyup.enter)="checkWarranty()"
+            placeholder="e.g. SN-A19F84B02..."
+            class="flex-1 px-5 py-4 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-amber-500 focus:outline-none transition-all shadow-inner uppercase font-mono tracking-wider"
+          />
+          
+          <button
+            (click)="checkWarranty()"
+            [disabled]="loading()"
+            class="bg-blue-600 hover:bg-blue-700 text-white dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 font-black uppercase tracking-widest py-4 px-8 rounded-full transition-all duration-300 shadow-md flex items-center justify-center space-x-2 shrink-0 cursor-pointer disabled:opacity-50"
+          >
+            <span *ngIf="!loading()">Verify Status</span>
+            <span *ngIf="loading()" class="flex items-center space-x-2">
+              <svg class="animate-spin h-4 w-4 text-white dark:text-blue-955" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Verifying...</span>
+            </span>
+          </button>
+        </div>
+
+        <p *ngIf="error()" class="text-xs font-bold text-rose-500 dark:text-rose-400 mt-2 text-center">
+          ⚠️ {{ error() }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Result Details Card -->
+    <div *ngIf="warranty()" class="glass-panel p-8 rounded-[2.5rem] shadow-xl border max-w-2xl mx-auto overflow-hidden relative">
+      <!-- Decorative gold stamp icon background -->
+      <div class="absolute right-4 top-4 opacity-5 pointer-events-none text-slate-800 dark:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+
+      <div class="space-y-6">
+        <!-- Header status info -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-5 border-b border-slate-100 dark:border-slate-800/60 gap-4">
+          <div>
+            <span class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">Registration Verified</span>
+            <h2 class="text-xl font-black text-slate-800 dark:text-slate-100">{{ warranty().product?.name }}</h2>
+            <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold tracking-wider font-mono mt-0.5 uppercase">SKU: {{ warranty().product?.sku }}</p>
+          </div>
+          
+          <div class="shrink-0">
+            <span 
+              [ngClass]="warranty().status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'"
+              class="px-4 py-2 rounded-full border text-xs font-black uppercase tracking-wider block text-center"
+            >
+              {{ warranty().status === 'ACTIVE' ? '✓ Active Coverage' : '✗ Expired' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs sm:text-sm">
+          <div class="space-y-4">
+            <div>
+              <span class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Registered Customer</span>
+              <span class="font-extrabold text-slate-700 dark:text-slate-300 block">{{ warranty().customerName }}</span>
+              <span class="text-xs text-slate-400 dark:text-slate-500 block mt-0.5">{{ warranty().customerEmail }} | {{ warranty().customerPhone }}</span>
+            </div>
+            
+            <div>
+              <span class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Hardware Serial Code</span>
+              <span class="font-bold font-mono tracking-wider text-slate-700 dark:text-slate-300 uppercase block">{{ warranty().serialNumber }}</span>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <span class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Coverage Start Date</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300 block">{{ warranty().startDate | date:'longDate' }}</span>
+            </div>
+            
+            <div>
+              <span class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Coverage End Date</span>
+              <span class="font-bold text-slate-700 dark:text-slate-300 block">{{ warranty().endDate | date:'longDate' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action tools -->
+        <div class="pt-6 border-t border-slate-100 dark:border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold leading-relaxed max-w-xs">
+            Generate and save the official certificate proof of hardware purchase and support protection from Sri Pavan Computers.
+          </p>
+          
+          <button
+            (click)="downloadCertificate()"
+            class="bg-slate-900 text-white hover:bg-blue-600 dark:bg-amber-500 dark:text-blue-950 dark:hover:bg-amber-400 py-3.5 px-6 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center space-x-2 shrink-0 cursor-pointer shadow-sm"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download Certificate</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>

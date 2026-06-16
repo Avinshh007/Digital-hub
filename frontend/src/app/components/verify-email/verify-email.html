@@ -1,0 +1,65 @@
+<div class="min-h-screen flex items-center justify-center bg-transparent pt-24 pb-16 px-4">
+  <div class="w-full max-w-md">
+    
+    <!-- OTP Verify Card -->
+    <div class="glass-panel p-8 sm:p-10 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full pointer-events-none"></div>
+
+      <div class="text-center space-y-2 mb-8">
+        <h2 class="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Verify Email</h2>
+        <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">
+          Enter the 6-digit verification code sent to your email.
+        </p>
+      </div>
+
+      <!-- Messages -->
+      <div *ngIf="error()" class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 p-4 rounded-2xl text-xs font-semibold mb-6">
+        {{ error() }}
+      </div>
+      <div *ngIf="success()" class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-400 p-4 rounded-2xl text-xs font-semibold mb-6">
+        {{ success() }}
+      </div>
+
+      <form (submit)="handleSubmit($event)" class="space-y-6">
+        <div>
+          <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Registered Email</label>
+          <input
+            type="email"
+            [(ngModel)]="email"
+            name="email"
+            required
+            placeholder="e.g. user@example.com"
+            class="w-full bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 px-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100 transition-all placeholder-slate-400"
+          />
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">6-Digit OTP Code</label>
+          <input
+            type="text"
+            [(ngModel)]="otp"
+            name="otp"
+            required
+            maxlength="6"
+            placeholder="123456"
+            class="w-full text-center bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 px-4 text-lg font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100 transition-all placeholder-slate-300"
+          />
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="loading()"
+          class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg hover:shadow-indigo-500/10 transition-all cursor-pointer flex items-center justify-center space-x-2"
+        >
+          <span *ngIf="!loading()">Verify Account</span>
+          <span *ngIf="loading()">Verifying...</span>
+        </button>
+      </form>
+
+      <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500">
+        Code expired or didn't receive it? Register again to request another code.
+      </div>
+
+    </div>
+  </div>
+</div>

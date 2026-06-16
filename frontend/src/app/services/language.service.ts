@@ -1,0 +1,181 @@
+// src/app/services/language.service.ts
+import { Injectable, signal, computed } from '@angular/core';
+
+export type Language = 'en' | 'te';
+
+export const translations = {
+  en: {
+    home: 'Home',
+    shop: 'Shop',
+    aboutUs: 'About Us',
+    contactUs: 'Contact Us',
+    faq: 'FAQ',
+    cart: 'Cart',
+    wishlist: 'Wishlist',
+    login: 'Login',
+    register: 'Register',
+    profile: 'Profile',
+    logout: 'Logout',
+    adminDashboard: 'Admin Dashboard',
+    heroSubtitle: 'Premium Electronics & Computer Repair Store at Best Prices',
+    featuredCategories: 'Featured Categories',
+    featuredProducts: 'Featured Products',
+    recentlyViewed: 'Recently Viewed Products',
+    whatsAppSupport: 'Need Help? Chat on WhatsApp',
+    quickOrderWhatsApp: 'Order via WhatsApp',
+    quickOrderDesc: 'Contact our store directly to place your order instantly over WhatsApp!',
+    searchPlaceholder: 'Search laptops, monitors, accessories...',
+    filters: 'Filters',
+    priceRange: 'Price Range',
+    category: 'Category',
+    brand: 'Brand',
+    stockStatus: 'Stock Status',
+    all: 'All',
+    inStock: 'In Stock',
+    outOfStock: 'Out of Stock',
+    sortBy: 'Sort By',
+    priceLowHigh: 'Price: Low to High',
+    priceHighLow: 'Price: High to Low',
+    ratingHighLow: 'Customer Rating',
+    specifications: 'Specifications',
+    description: 'Description',
+    customerReviews: 'Customer Reviews',
+    writeReview: 'Write a Review',
+    relatedProducts: 'Related Products',
+    addToCart: 'Add to Cart',
+    addedToCart: 'Added to Cart!',
+    addToWishlist: 'Add to Wishlist',
+    rating: 'Rating',
+    comment: 'Comment',
+    submitReview: 'Submit Review',
+    shoppingCart: 'Shopping Cart',
+    emptyCart: 'Your cart is empty.',
+    subtotal: 'Subtotal',
+    tax: 'GST (18%)',
+    discount: 'Discount',
+    total: 'Total Amount',
+    checkout: 'Proceed to Checkout',
+    couponCode: 'Coupon Code',
+    apply: 'Apply',
+    shippingDetails: 'Shipping Details',
+    fullName: 'Full Name',
+    address: 'Street Address',
+    city: 'City',
+    state: 'State',
+    pinCode: 'PIN Code',
+    phone: 'Phone Number',
+    paymentMethod: 'Payment Method',
+    cashOnDelivery: 'Cash on Delivery (COD)',
+    onlinePayment: 'Online Card Payment (Simulated)',
+    placeOrder: 'Place Order',
+    orderSuccess: 'Order Placed Successfully!',
+    invoice: 'Download GST Invoice',
+    trackingStatus: 'Order Tracking Status',
+    orderSummary: 'Order Summary',
+    loading: 'Loading...',
+    gstText: 'GSTIN Supported Invoice',
+    storeLocation: 'Visit Our Store',
+  },
+  te: {
+    home: 'హోమ్',
+    shop: 'షాప్',
+    aboutUs: 'మా గురించి',
+    contactUs: 'సంప్రదించండి',
+    faq: 'ప్రశ్నోత్తరాలు',
+    cart: 'కార్ట్',
+    wishlist: 'విష్‌లిస్ట్',
+    login: 'లాగిన్',
+    register: 'రిజిస్టర్',
+    profile: 'ప్రొఫైల్',
+    logout: 'లాగౌట్',
+    adminDashboard: 'అడ్మిన్ డాష్‌బోర్డ్',
+    heroSubtitle: 'అత్యుత్తమ ధరలలో ప్రీమియం ఎలక్ట్రానిక్స్ & కంప్యూటర్ రిపేర్ స్టోర్',
+    featuredCategories: 'ప్రధాన విభాగాలు',
+    featuredProducts: 'ప్రత్యేక ఉత్పత్తులు',
+    recentlyViewed: 'ఇటీవల చూసిన ఉత్పత్తులు',
+    whatsAppSupport: 'సహాయం కావాలా? వాట్సాప్‌లో చాట్ చేయండి',
+    quickOrderWhatsApp: 'వాట్సాప్ ద్వారా ఆర్డర్ చేయండి',
+    quickOrderDesc: 'వాట్సాప్ ద్వారా తక్షణమే మీ ఆర్డర్ చేయడానికి నేరుగా మా స్టోర్‌ను సంప్రదించండి!',
+    searchPlaceholder: 'ల్యాప్‌టాప్‌లు, మానిటర్లు, యాక్సెసరీల కోసం వెతకండి...',
+    filters: 'ఫిల్టర్లు',
+    priceRange: 'ధర పరిధి',
+    category: 'వర్గం',
+    brand: 'బ్రాండ్',
+    stockStatus: 'స్టాక్ స్థితి',
+    all: 'అన్నీ',
+    inStock: 'స్టాక్ ఉంది',
+    outOfStock: 'స్టాక్ లేదు',
+    sortBy: 'క్రమబద్ధీకరించు',
+    priceLowHigh: 'ధర: తక్కువ నుండి ఎక్కువ',
+    priceHighLow: 'ధర: ఎక్కువ నుండి తక్కువ',
+    ratingHighLow: 'కస్టమర్ రేటింగ్',
+    specifications: 'స్పెసిఫికేషన్స్',
+    description: 'వివరణ',
+    customerReviews: 'కస్టమర్ సమీక్షలు',
+    writeReview: 'సమీక్ష రాయండి',
+    relatedProducts: 'సంబంధిత ఉత్పత్తులు',
+    addToCart: 'కార్ట్‌కు జోడించు',
+    addedToCart: 'కార్ట్‌కు జోడించబడింది!',
+    addToWishlist: 'విష్‌లిస్ట్‌కు జోడించు',
+    rating: 'రేటింగ్',
+    comment: 'వ్యాఖ్య',
+    submitReview: 'సమీక్షను సమర్పించు',
+    shoppingCart: 'షాపింగ్ కార్ట్',
+    emptyCart: 'మీ కార్ట్ ఖాళీగా ఉంది.',
+    subtotal: 'ఉప మొత్తం',
+    tax: 'GST పన్ను (18%)',
+    discount: 'తగ్గింపు',
+    total: 'మొత్తం ధర',
+    checkout: 'చెక్అవుట్ చేయండి',
+    couponCode: 'కూపన్ కోడ్',
+    apply: 'వర్తింపజేయి',
+    shippingDetails: 'షిప్పింగ్ వివరాలు',
+    fullName: 'పూర్తి పేరు',
+    address: 'చిరునామా',
+    city: 'నగరం',
+    state: 'రాష్ట్రం',
+    pinCode: 'పిన్ కోడ్',
+    phone: 'ఫోన్ నంబర్',
+    paymentMethod: 'చెల్లింపు విధానం',
+    cashOnDelivery: 'క్యాష్ ఆన్ డెలివరీ (COD)',
+    onlinePayment: 'ఆన్‌లైన్ కార్డ్ చెల్లింపు (కృత్రిమ)',
+    placeOrder: 'ఆర్డర్ చేయండి',
+    orderSuccess: 'ఆన్ ఆర్డర్ విజయవంతంగా పూర్తయింది!',
+    invoice: 'GST ఇన్వాయిస్ డౌన్‌లోడ్',
+    trackingStatus: 'ఆర్డర్ ట్రాకింగ్ స్థితి',
+    orderSummary: 'ఆర్డర్ సారాంశం',
+    loading: 'లోడ్ అవుతోంది...',
+    gstText: 'GSTIN ఇన్వాయిస్ మద్దతు ఉంది',
+    storeLocation: 'మా దుకాణాన్ని సందర్శించండి',
+  },
+};
+
+@Injectable({
+  providedIn: 'root',
+})
+export class LanguageService {
+  private currentLanguage = signal<Language>('en');
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('language') as Language;
+      if (saved === 'en' || saved === 'te') {
+        this.currentLanguage.set(saved);
+      }
+    }
+  }
+
+  get language() {
+    return this.currentLanguage.asReadonly();
+  }
+
+  // Active translation dictionary
+  t = computed(() => translations[this.currentLanguage()]);
+
+  setLanguage(lang: Language) {
+    this.currentLanguage.set(lang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('language', lang);
+    }
+  }
+}

@@ -1,0 +1,218 @@
+<div class="min-h-screen bg-transparent pt-24 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="h-96 flex flex-col items-center justify-center space-y-3">
+      <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="text-xs text-slate-400 font-extrabold tracking-widest uppercase">Fetching Specs Sheet...</span>
+    </div>
+
+    <!-- Details View -->
+    <div *ngIf="!loading() && product()" class="space-y-16">
+      
+      <!-- Top Section: Apple-Style Two-column Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start relative">
+        
+        <!-- Left Column: Image Gallery (scrolling smoothly) -->
+        <div class="space-y-6">
+          <!-- Big image display -->
+          <div class="glass-panel p-8 aspect-square flex items-center justify-center shadow-xs">
+            <img [src]="imagesList()[selectedImageIndex()]" [alt]="product()?.name" class="max-h-[380px] object-contain dark:brightness-95 mix-blend-multiply dark:mix-blend-normal" />
+          </div>
+          
+          <!-- Thumbnails slider list -->
+          <div *ngIf="imagesList().length > 1" class="flex items-center space-x-3.5 overflow-x-auto pb-2">
+            <button
+              *ngFor="let img of imagesList(); let idx = index"
+              (click)="setImageIndex(idx)"
+              [ngClass]="selectedImageIndex() === idx ? 'border-indigo-600 dark:border-brand-gold scale-105' : 'border-transparent hover:border-slate-300'"
+              class="w-20 h-20 glass-panel p-2 rounded-2xl flex items-center justify-center shrink-0 transition-all cursor-pointer border"
+            >
+              <img [src]="img" class="max-h-full max-w-full object-contain dark:brightness-95 mix-blend-multiply dark:mix-blend-normal" alt="Thumb" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Column: STICKY selections panel -->
+        <div class="lg:sticky lg:top-24 space-y-8 glass-panel p-8 sm:p-10 rounded-[2.5rem] shadow-lg">
+          
+          <!-- Header details -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              <span>{{ product()?.brand?.name || 'SPC' }}</span>
+              <span>SKU: {{ product()?.sku }}</span>
+            </div>
+            <h1 class="text-2xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none uppercase">
+              {{ product()?.name }}
+            </h1>
+            
+            <!-- Rating overview -->
+            <div class="flex items-center space-x-2 pt-1">
+              <div class="flex text-amber-400">
+                <svg *ngFor="let s of [1,2,3,4,5]; let i = index" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" [attr.fill]="i < Math.round(product()!.rating) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </div>
+              <span class="text-xs text-slate-500 dark:text-slate-400 font-bold">({{ product()?.ratingCount }} reviews)</span>
+            </div>
+          </div>
+
+          <!-- Price & Discounts -->
+          <div class="bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div class="flex flex-col">
+              <span class="text-3xl font-black text-slate-900 dark:text-slate-50">
+                ₹{{ product()?.price?.toLocaleString('en-IN') }}
+              </span>
+              <span *ngIf="product()!.originalPrice > product()!.price" class="text-sm text-slate-400 line-through font-bold">
+                ₹{{ product()?.originalPrice?.toLocaleString('en-IN') }}
+              </span>
+            </div>
+            <span *ngIf="discount > 0" class="bg-emerald-500 text-white font-extrabold text-xs px-3.5 py-1.5 rounded-full shadow-md">
+              {{ discount }}% OFF
+            </span>
+          </div>
+
+          <!-- Quantity selection and stock status -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+              <span>Quantity</span>
+              <span [ngClass]="product()!.stock > 0 ? 'text-emerald-600' : 'text-rose-500'">
+                {{ product()!.stock > 0 ? 'In Stock (' + product()!.stock + ' available)' : 'Out of Stock' }}
+              </span>
+            </div>
+            
+            <div *ngIf="product()!.stock > 0" class="flex items-center space-x-4">
+              <div class="flex items-center bg-slate-100 dark:bg-slate-900/60 rounded-full border border-slate-200/50 dark:border-slate-800 p-1">
+                <button (click)="decrementQty()" class="w-10 h-10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all cursor-pointer font-bold">-</button>
+                <span class="px-5 font-black text-slate-800 dark:text-slate-100 text-sm">{{ quantity() }}</span>
+                <button (click)="incrementQty()" class="w-10 h-10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-all cursor-pointer font-bold">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Checkout actions -->
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button
+              [disabled]="product()!.stock <= 0"
+              (click)="handleAddToCart()"
+              class="flex-grow py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-wider text-xs sm:text-sm rounded-full transition-all shadow-lg shadow-indigo-500/15 cursor-pointer disabled:opacity-50"
+            >
+              Add to Cart
+            </button>
+            <a
+              [href]="whatsappInquiryUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-center space-x-2 py-4 px-6 border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/10 hover:text-emerald-700 dark:text-emerald-400 font-black uppercase tracking-wider text-xs sm:text-sm rounded-full transition-all cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-whatsapp shrink-0" viewBox="0 0 16 16">
+                <path d="M13.601 2.326A7.85 7.85 0 0 0 8 .258c-4.3 0-7.805 3.505-7.805 7.805 0 1.376.354 2.721 1.026 3.918L.028 16l4.241-1.112a7.8 7.8 0 0 0 3.731.944h.005a7.805 7.805 0 0 0 7.805-7.805 7.8 7.8 0 0 0-2.308-5.526zM8 14.17c-1.208 0-2.395-.325-3.433-.94l-.245-.145-2.55.669.681-2.482-.16-.254a6.49 6.49 0 0 1-1.012-3.473c0-3.58 2.91-6.49 6.49-6.49a6.49 6.49 0 0 1 6.49 6.49c0 3.58-2.91 6.49-6.49 6.49zm3.857-4.809c-.213-.107-1.262-.622-1.457-.69-.195-.07-.338-.107-.48.107-.14.214-.543.69-.665.828-.122.14-.244.156-.457.05-.213-.107-.9-.33-1.714-1.053-.633-.564-1.06-1.26-1.184-1.472-.124-.213-.013-.328.093-.433.096-.095.213-.248.32-.372.107-.124.143-.213.213-.356.071-.143.036-.268-.018-.375-.053-.107-.48-1.156-.658-1.583-.173-.418-.363-.362-.48-.368-.121-.006-.26-.008-.4-.008a.77.77 0 0 0-.56.262c-.194.214-.741.724-.741 1.764s.752 2.044.857 2.183c.105.14 1.48 2.262 3.587 3.172.5.217.89.347 1.192.443.504.16 1.054.138 1.45-.022.44-.178 1.262-.516 1.44-.997.177-.481.177-.892.124-.997-.053-.105-.195-.16-.407-.267z"/>
+              </svg>
+              <span>Ask on WhatsApp</span>
+            </a>
+            <button
+              (click)="handleWishlistToggle()"
+              [ngClass]="isInWishlist() ? 'bg-rose-50 border-rose-200 text-rose-500 dark:bg-rose-950/30 dark:border-rose-900/50 dark:text-rose-400' : 'bg-slate-100 dark:bg-slate-900/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'"
+              class="px-6 py-4 border border-transparent rounded-full transition-all flex items-center justify-center cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" [attr.fill]="isInWishlist() ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </button>
+          </div>
+
+          <!-- Safe badge -->
+          <div class="border-t border-slate-100 dark:border-slate-800/80 pt-6 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center space-x-2.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 dark:text-brand-gold"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Original Brand Warranty & GST-Registered Tax Invoice</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Specs Sheet & Details -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-12 border-t border-slate-200 dark:border-slate-800/80 pt-16">
+        
+        <!-- Description -->
+        <div class="lg:col-span-2 space-y-6">
+          <h2 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Product Description</h2>
+          <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed font-semibold">
+            {{ product()?.description }}
+          </p>
+
+          <!-- Specifications table -->
+          <div class="space-y-6 pt-6" *ngIf="parsedSpecs().length > 0">
+            <h3 class="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Technical Specifications</h3>
+            <div class="glass-panel rounded-3xl overflow-hidden shadow-xs border border-slate-200/50 dark:border-slate-800/80">
+              <table class="w-full text-left text-xs border-collapse">
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80 font-semibold">
+                  <tr *ngFor="let spec of parsedSpecs()" class="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                    <td class="p-4 bg-slate-50/30 dark:bg-slate-900/20 text-slate-400 dark:text-slate-500 font-bold uppercase w-1/3 border-r border-slate-100 dark:border-slate-800/80">{{ spec.key }}</td>
+                    <td class="p-4 text-slate-700 dark:text-slate-200 w-2/3">{{ spec.val }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reviews Column -->
+        <div class="space-y-8">
+          <h2 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Reviews ({{ product()?.reviews?.length || 0 }})</h2>
+          
+          <!-- Add Review Form (Auth check) -->
+          <div *ngIf="user(); else guestReviewTpl" class="glass-panel p-6 rounded-3xl shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm uppercase tracking-wide">Write a review</h3>
+            <div *ngIf="reviewError()" class="bg-rose-50 border border-rose-100 text-rose-600 dark:bg-rose-950/30 dark:border-rose-900/50 dark:text-rose-400 rounded-xl p-3 text-xs font-bold">{{ reviewError() }}</div>
+            
+            <form (submit)="submitReview($event)" class="space-y-4">
+              <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Rating</label>
+                <select [(ngModel)]="reviewRating" name="reviewRating" class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                  <option [value]="5">5 - Excellent</option>
+                  <option [value]="4">4 - Very Good</option>
+                  <option [value]="3">3 - Good</option>
+                  <option [value]="2">2 - Fair</option>
+                  <option [value]="1">1 - Poor</option>
+                </select>
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Comments</label>
+                <textarea [(ngModel)]="reviewComment" name="reviewComment" rows="3" required class="w-full bg-slate-50 border border-slate-200 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400" placeholder="Share your experience with this device..."></textarea>
+              </div>
+              <button type="submit" [disabled]="submittingReview()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-wider text-[10px] rounded-full shadow-md transition-all cursor-pointer">
+                Submit Review
+              </button>
+            </form>
+          </div>
+          <ng-template #guestReviewTpl>
+            <div class="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 p-6 rounded-3xl text-center space-y-2">
+              <p class="text-xs font-bold text-slate-600 dark:text-slate-400">Want to write a review for this item?</p>
+              <a routerLink="/login" class="inline-block text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-wide">Login to submit review</a>
+            </div>
+          </ng-template>
+
+          <!-- Reviews List -->
+          <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            <div *ngFor="let rev of product()?.reviews" class="glass-panel p-5 rounded-2xl shadow-xs space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-700 dark:text-slate-300 text-xs uppercase tracking-wide">{{ rev.userName }}</span>
+                <span class="text-[9px] text-slate-400 dark:text-slate-500 font-semibold">{{ rev.createdAt | date:'mediumDate' }}</span>
+              </div>
+              <div class="flex text-amber-400">
+                <svg *ngFor="let s of [1,2,3,4,5]; let idx = index" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" [attr.fill]="idx < rev.rating ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" class="shrink-0"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </div>
+              <p class="text-slate-500 dark:text-slate-400 text-xs font-semibold leading-relaxed">
+                {{ rev.comment }}
+              </p>
+            </div>
+            <div *ngIf="!product()?.reviews || product()!.reviews!.length === 0" class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
+              No customer reviews logged yet
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+</div>
