@@ -208,4 +208,11 @@ export class ProductService {
     );
     return res.missingImages;
   }
+
+  // POST /api/products/import/auto-assign-images – trigger bulk auto assignment of catalog images
+  async autoAssignProductImages(): Promise<any> {
+    return firstValueFrom(
+      this.http.post<any>(`${this.apiUrl}/products/import/auto-assign-images`, {}, { withCredentials: true })
+    );
+  }
 }

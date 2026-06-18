@@ -68,6 +68,17 @@ export class AdminProductsComponent implements OnInit {
     summary: { created: number; updated: number; skipped: number; errors: string[] };
   } | null>(null);
 
+  autoAssigning = signal(false);
+  autoAssignResult = signal<{
+    scanned: number;
+    assigned: number;
+    skipped: number;
+    manualReview: number;
+    defaultStoreImageCount: number;
+    updatedCount: number;
+    executionTime: string;
+  } | null>(null);
+
   ngOnInit() {
     this.loadAdminInventory();
   }
@@ -532,5 +543,23 @@ export class AdminProductsComponent implements OnInit {
     this.importResult.set(null);
     this.importDataFile = null;
     this.importZipFile = null;
+    this.autoAssignResult.set(null);
+  }
+
+  async handleAutoAssignImages() {
+    this.autoAssigning.set(true);
+    this.autoAssignResult.set(null);
+    this.importResult.set(null);
+    try {
+      const res = await this.productService.autoAssignProductImages();
+      this.autoAssignResult.set(res.summary);
+      alert(`Demo image assignment complete! Assigned: ${res.summary.assigned} images.`);
+      this.loadAdminInventory();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.error || 'Failed to auto-assign product images.');
+    } finally {
+      this.autoAssigning.set(false);
+    }
   }
 }

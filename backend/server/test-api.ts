@@ -238,6 +238,25 @@ async function runTests() {
     assert.ok(Array.isArray(missingData.missingImages), 'Missing images should return an array');
     console.log(`Products holding placeholder/missing images count: ${missingData.missingImages.length}`);
 
+    // 9. Test Auto Assign Images Endpoint
+    console.log('Testing bulk auto-assign product images...');
+    const prodABefore = await prisma.product.findUnique({ where: { sku: 'TEST-SKU-A' } });
+    assert.ok(prodABefore?.images.includes('hero_banner.jpg'), 'Product A should initially have placeholder image');
+
+    const autoAssignRes = await fetch(`http://localhost:${testPort}/api/products/import/auto-assign-images`, {
+      method: 'POST',
+      headers: requestHeaders
+    });
+
+    assert.strictEqual(autoAssignRes.status, 200, 'Auto-assign images endpoint should succeed');
+    const autoAssignData = await autoAssignRes.json() as any;
+    assert.ok(autoAssignData.summary, 'Should return summary info');
+    assert.ok(autoAssignData.summary.assigned > 0, 'Should have assigned at least 1 image');
+
+    const prodAAfter = await prisma.product.findUnique({ where: { sku: 'TEST-SKU-A' } });
+    assert.ok(prodAAfter?.images.includes('images.unsplash.com'), 'Product A images should now contain an Unsplash URL');
+    console.log(`Auto-assign successful! New image for Product A: ${prodAAfter?.images}`);
+
     console.log('--- ALL BACKEND INTEGRATION TESTS PASSED SUCCESSFULLY! ---');
 
   } catch (err: any) {

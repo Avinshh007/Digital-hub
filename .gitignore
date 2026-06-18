@@ -36,3 +36,7 @@ build/
 coverage/
 
 *.log
+
+backend/prisma/backups/
+backend/scraped_laptops.json
+backend/validated_unsplash_pools.json

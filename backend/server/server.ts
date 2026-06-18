@@ -20,6 +20,7 @@ import { warrantyRouter } from './warranty';
 import { amcRouter } from './amc';
 import { pcBuilderRouter } from './pcbuilder';
 import { logAudit } from './audit';
+import { getAutoAssignedImage } from './images-pool';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -1753,6 +1754,214 @@ app.get('/api/products/import/missing-images', requireAdmin, async (req: Request
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// POST /api/products/import/auto-assign-images (Admin only)
+app.post('/api/products/import/auto-assign-images', requireAdmin, async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  try {
+    const products = await prisma.product.findMany({
+      include: { category: true, brand: true }
+    });
+
+    // 1. Calculate image URL frequencies across all products
+    const imageFreq: { [url: string]: number } = {};
+    for (const prod of products) {
+      try {
+        const parsed = JSON.parse(prod.images);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const mainImage = parsed[0];
+          if (mainImage) {
+            imageFreq[mainImage] = (imageFreq[mainImage] || 0) + 1;
+          }
+        }
+      } catch (e) {
+        if (prod.images) {
+          imageFreq[prod.images] = (imageFreq[prod.images] || 0) + 1;
+        }
+      }
+    }
+
+    // Determine common default images used by more than 3 products
+    const commonImages = new Set<string>();
+    for (const [url, count] of Object.entries(imageFreq)) {
+      if (count > 3) {
+        commonImages.add(url);
+      }
+    }
+
+    // Helper to evaluate if an image is a default store image/placeholder
+    const isPlaceholderImage = (imagesStr: string): boolean => {
+      if (!imagesStr) return true;
+      let mainImage = '';
+      try {
+        const parsed = JSON.parse(imagesStr);
+        mainImage = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : '';
+      } catch (e) {
+        mainImage = imagesStr;
+      }
+      
+      if (!mainImage) return true;
+      
+      const lower = mainImage.toLowerCase();
+      if (
+        lower.includes('placeholder') ||
+        lower.includes('hero_banner.jpg') ||
+        lower.includes('banner') ||
+        lower.includes('logo') ||
+        lower.includes('default') ||
+        lower.includes('shop') ||
+        lower.includes('sri-pavan') ||
+        lower.includes('sri_pavan')
+      ) {
+        return true;
+      }
+
+      // Check if file size on disk is exactly 841650 bytes (default store image copy)
+      if (mainImage.startsWith('/uploads/') || mainImage.startsWith('uploads/')) {
+        try {
+          const filePath = path.resolve(
+            process.cwd(),
+            '../frontend/public',
+            mainImage.startsWith('/') ? mainImage.substring(1) : mainImage
+          );
+          if (fs.existsSync(filePath)) {
+            const stats = fs.statSync(filePath);
+            if (stats.size === 841650) {
+              return true;
+            }
+          }
+        } catch (err) {
+          // ignore stat errors
+        }
+      }
+
+      return commonImages.has(mainImage);
+    };
+
+
+    // 2. Count products using default store images/placeholders
+    let defaultStoreImageCount = 0;
+    const rollbackMapping: { [id: string]: string } = {};
+
+    for (const prod of products) {
+      if (isPlaceholderImage(prod.images)) {
+        defaultStoreImageCount++;
+        rollbackMapping[prod.id] = prod.images;
+      }
+    }
+
+    // 3. Create a dedicated rollback backup of current image URLs
+    const backupDir = path.join(__dirname, '../prisma/backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const timestamp = Date.now();
+    
+    // Save full product table backup
+    const backupPath = path.join(backupDir, `products_backup_${timestamp}.json`);
+    fs.writeFileSync(backupPath, JSON.stringify(products, null, 2), 'utf8');
+
+    // Save dedicated original image mapping log
+    const rollbackPath = path.join(backupDir, `image_rollback_log_${timestamp}.json`);
+    fs.writeFileSync(rollbackPath, JSON.stringify(rollbackMapping, null, 2), 'utf8');
+
+    console.log(`[Demo Image Assignment] Backed up products to ${backupPath}`);
+    console.log(`[Demo Image Assignment] Wrote image rollback mapping log to ${rollbackPath}`);
+    console.log(`[Demo Image Assignment] Found ${defaultStoreImageCount} products using default store/placeholder images`);
+
+    let scanned = products.length;
+    let assigned = 0;
+    let skipped = 0;
+    let manualReview = 0;
+    let loggedCount = 0;
+    const details: any[] = [];
+
+    for (const prod of products) {
+      const isPlaceholder = isPlaceholderImage(prod.images);
+
+      if (!isPlaceholder) {
+        skipped++;
+        continue;
+      }
+
+      if (prod.lockImages) {
+        skipped++;
+        details.push({
+          sku: prod.sku,
+          name: prod.name,
+          status: 'SKIPPED',
+          reason: 'Images are locked (lockImages = true)'
+        });
+        continue;
+      }
+
+      const categorySlug = prod.category?.slug || 'other-electronics';
+      const brandSlug = prod.brand?.slug || 'sri-pavan-custom';
+      
+      const newImageUrl = getAutoAssignedImage(prod.name, brandSlug, categorySlug, prod.id, prod.sku);
+
+      try {
+        if (newImageUrl) {
+          // Keep reference to the original images string for verification log
+          const originalUrl = prod.images;
+
+          await prisma.product.update({
+            where: { id: prod.id },
+            data: {
+              images: JSON.stringify([newImageUrl])
+            }
+          });
+          
+          if (loggedCount < 20) {
+            console.log(`[Demo Image Assignment] [${loggedCount + 1}/20] Product ID: ${prod.id}, SKU: ${prod.sku}, Name: ${prod.name}\n  -> Original: ${originalUrl}\n  -> Replaced: ${newImageUrl}`);
+            loggedCount++;
+          }
+          
+          assigned++;
+        } else {
+          manualReview++;
+          details.push({
+            sku: prod.sku,
+            name: prod.name,
+            status: 'MANUAL_REVIEW',
+            reason: 'Could not match relevant image'
+          });
+        }
+      } catch (err: any) {
+        console.error(`[Demo Image Assignment] Error updating product ${prod.id} (${prod.sku}):`, err.message || err);
+        manualReview++;
+        details.push({
+          sku: prod.sku,
+          name: prod.name,
+          status: 'FAILED',
+          reason: `Database update error: ${err.message || 'Unknown error'}`
+        });
+      }
+    }
+
+    await logAudit(req.user!.id, req.user!.email, 'AUTO_ASSIGN_IMAGES', { scanned, assigned, skipped, manualReview }, req.ip);
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+    return res.json({
+      message: 'Product images auto-assignment complete',
+      summary: {
+        scanned,
+        assigned,
+        skipped,
+        manualReview,
+        defaultStoreImageCount,
+        updatedCount: assigned,
+        executionTime: `${duration}s`
+      },
+      details
+    });
+  } catch (error) {
+    console.error('Auto assign product images error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 /* ==========================================================================
    REVIEWS ENDPOINTS

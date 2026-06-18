@@ -175,7 +175,7 @@
     </div>
 
     <!-- Data & ZIP panels -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 gap-6">
       
       <!-- Panel 1: CSV Upload -->
       <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-sm flex flex-col justify-between space-y-6">
@@ -225,6 +225,58 @@
         </button>
       </div>
 
+      <!-- Panel 3: Assign Demo Product Images -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-sm flex flex-col justify-between space-y-6">
+        <div>
+          <h3 class="text-sm font-black uppercase tracking-tight text-slate-700 dark:text-slate-200">Assign Demo Product Images</h3>
+          <p class="text-xs text-slate-400 mt-1 uppercase font-semibold tracking-wider">Auto-matches high-quality catalog images for placeholders</p>
+          
+          <div class="mt-6 border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-850/50 rounded-2xl p-5 text-center">
+            <span class="block text-3xl">🤖</span>
+            <span class="block text-xs font-bold text-slate-600 dark:text-slate-300 mt-2">Intelligent Matching Utility</span>
+            <span class="block text-[10px] text-slate-400 uppercase tracking-widest font-bold mt-1">
+              Deterministic, brand & category aligned Unsplash photo matching
+            </span>
+          </div>
+        </div>
+
+        <button (click)="handleAutoAssignImages()" [disabled]="importing() || autoAssigning()" 
+                class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer">
+          {{ autoAssigning() ? 'Assigning...' : 'Assign Demo Product Images' }}
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Assign Demo Product Images Summary Report -->
+    <div *ngIf="autoAssignResult()" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Assign Demo Product Images Summary</h4>
+        <button (click)="clearImportResults()" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider cursor-pointer">Clear</button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+        <div class="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl">
+          <span class="block text-xl font-black text-slate-600 dark:text-slate-300">{{ autoAssignResult()?.scanned }}</span>
+          <span class="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mt-1">Products Scanned</span>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl">
+          <span class="block text-xl font-black text-emerald-600">{{ autoAssignResult()?.assigned }}</span>
+          <span class="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mt-1">Images Assigned</span>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl">
+          <span class="block text-xl font-black text-amber-500">{{ autoAssignResult()?.skipped }}</span>
+          <span class="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mt-1">Products Skipped</span>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl">
+          <span class="block text-xl font-black text-indigo-600">{{ autoAssignResult()?.defaultStoreImageCount }}</span>
+          <span class="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mt-1">Default Images Found</span>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl col-span-2 md:col-span-1">
+          <span class="block text-xl font-black text-emerald-700">{{ autoAssignResult()?.updatedCount }}</span>
+          <span class="block text-[9px] uppercase tracking-wider text-slate-400 font-bold mt-1">Products Updated</span>
+        </div>
+      </div>
     </div>
 
     <!-- Import Results Summary Report -->
@@ -256,7 +308,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <!-- CRUD Form panel overlay (Manual Product Management) -->
