@@ -118,6 +118,15 @@
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" [attr.fill]="isInWishlist() ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
             </button>
+            <!-- Compare Button -->
+            <button
+              (click)="toggleCompare()"
+              [ngClass]="isInCompare() ? 'bg-indigo-50 border-indigo-200 text-indigo-650 dark:bg-indigo-950/30 dark:border-indigo-900/50 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-900/80 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'"
+              class="px-6 py-4 border border-transparent rounded-full transition-all flex items-center justify-center cursor-pointer"
+              [title]="isInCompare() ? 'Remove from Compare' : 'Add to Compare'"
+            >
+              ⚖️
+            </button>
           </div>
 
           <!-- Safe badge -->
@@ -212,6 +221,102 @@
         </div>
 
       </section>
+
+      <!-- Smart Recommendations Section -->
+      <section class="border-t border-slate-200 dark:border-slate-800/80 pt-16 mt-16 space-y-8 animate-fade-in">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Smart Recommendations</h2>
+          <p class="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold tracking-wider mt-1">Explore alternative choices tailored to your preferences</p>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="flex flex-wrap gap-2 border-b border-slate-100 dark:border-slate-850 pb-4 text-xs font-bold uppercase tracking-wider">
+          <button (click)="activeRecommendationTab.set('similar')"
+                  [class.text-indigo-650]="activeRecommendationTab() === 'similar'"
+                  [class.dark:text-indigo-400]="activeRecommendationTab() === 'similar'"
+                  [class.border-indigo-600]="activeRecommendationTab() === 'similar'"
+                  [class.text-slate-400]="activeRecommendationTab() !== 'similar'"
+                  class="px-4 py-2 border-b-2 border-transparent transition-all cursor-pointer">
+            Similar Products ({{ similarRecommendations().length }})
+          </button>
+          <button (click)="activeRecommendationTab.set('budget')"
+                  [class.text-indigo-650]="activeRecommendationTab() === 'budget'"
+                  [class.dark:text-indigo-400]="activeRecommendationTab() === 'budget'"
+                  [class.border-indigo-600]="activeRecommendationTab() === 'budget'"
+                  [class.text-slate-400]="activeRecommendationTab() !== 'budget'"
+                  class="px-4 py-2 border-b-2 border-transparent transition-all cursor-pointer">
+            Budget Options ({{ budgetRecommendations().length }})
+          </button>
+          <button (click)="activeRecommendationTab.set('better')"
+                  [class.text-indigo-650]="activeRecommendationTab() === 'better'"
+                  [class.dark:text-indigo-400]="activeRecommendationTab() === 'better'"
+                  [class.border-indigo-600]="activeRecommendationTab() === 'better'"
+                  [class.text-slate-400]="activeRecommendationTab() !== 'better'"
+                  class="px-4 py-2 border-b-2 border-transparent transition-all cursor-pointer">
+            Better Specs ({{ betterRecommendations().length }})
+          </button>
+          <button (click)="activeRecommendationTab.set('performance')"
+                  [class.text-indigo-650]="activeRecommendationTab() === 'performance'"
+                  [class.dark:text-indigo-400]="activeRecommendationTab() === 'performance'"
+                  [class.border-indigo-600]="activeRecommendationTab() === 'performance'"
+                  [class.text-slate-400]="activeRecommendationTab() !== 'performance'"
+                  class="px-4 py-2 border-b-2 border-transparent transition-all cursor-pointer">
+            High Performance ({{ performanceRecommendations().length }})
+          </button>
+        </div>
+
+        <!-- Tab Panels -->
+        <div>
+          <!-- Similar Products -->
+          <div *ngIf="activeRecommendationTab() === 'similar'" class="animate-fade-in">
+            <div *ngIf="similarRecommendations().length > 0; else noRecsTpl" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div *ngFor="let prod of similarRecommendations()">
+                <app-product-card [product]="prod"></app-product-card>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget Options -->
+          <div *ngIf="activeRecommendationTab() === 'budget'" class="animate-fade-in">
+            <div *ngIf="budgetRecommendations().length > 0; else noRecsTpl" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div *ngFor="let prod of budgetRecommendations()">
+                <app-product-card [product]="prod"></app-product-card>
+              </div>
+            </div>
+          </div>
+
+          <!-- Better Specs -->
+          <div *ngIf="activeRecommendationTab() === 'better'" class="animate-fade-in">
+            <div *ngIf="betterRecommendations().length > 0; else noRecsTpl" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div *ngFor="let prod of betterRecommendations()">
+                <app-product-card [product]="prod"></app-product-card>
+              </div>
+            </div>
+          </div>
+
+          <!-- High Performance -->
+          <div *ngIf="activeRecommendationTab() === 'performance'" class="animate-fade-in">
+            <div *ngIf="performanceRecommendations().length > 0; else noRecsTpl" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div *ngFor="let prod of performanceRecommendations()">
+                <app-product-card [product]="prod"></app-product-card>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty Recommendations Template -->
+          <ng-template #noRecsTpl>
+            <div class="py-8 text-center text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-wider">
+              No recommendations available in this category
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- Recently Viewed Section -->
+      <app-recently-viewed></app-recently-viewed>
+
+      <!-- Trust Badges Section -->
+      <app-trust-section></app-trust-section>
 
     </div>
   </div>

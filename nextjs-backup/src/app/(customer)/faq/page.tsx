@@ -15,7 +15,7 @@ export default function FaqPage() {
 
   const faqItems = [
     {
-      q: 'Where is Sri Pavan Computers located?',
+      q: 'Where is  DIGITAL HUBlocated?',
       qTe: 'శ్రీ పవన్ కంప్యూటర్స్ ఎక్కడ ఉంది?',
       a: 'We are located at Krishna Kanth Plaza, R R Road, near Sanjay Nagar PHC, Kakinada, Andhra Pradesh. Our central store handles both electronic sales and desktop/laptop repair diagnostics.',
       aTe: 'మేము ఆంధ్రప్రదేశ్‌లోని కాకినాడ ఆర్ ఆర్ రోడ్, సంజయ్ నగర్ PHC సమీపంలోని కృష్ణ కాంత్ ప్లాజాలో ఉన్నాము. మా ప్రధాన దుకాణంలో కంప్యూటర్ విక్రయాలు మరియు ల్యాప్‌టాప్/డెస్క్‌టాప్ రిపేర్ సర్వీస్ చేస్తాము.',

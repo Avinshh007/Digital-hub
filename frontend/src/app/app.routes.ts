@@ -73,6 +73,14 @@ export const routes: Routes = [
     path: 'warranty', 
     loadComponent: () => import('./components/warranty/warranty').then(m => m.WarrantyComponent) 
   },
+  { 
+    path: 'track-repair', 
+    loadComponent: () => import('./components/repair-tracker/repair-tracker').then(m => m.RepairTrackerComponent) 
+  },
+  { 
+    path: 'compare', 
+    loadComponent: () => import('./components/compare/compare').then(m => m.CompareComponent) 
+  },
   
   // Admin Dashboard routes
   {
@@ -86,6 +94,10 @@ export const routes: Routes = [
       { 
         path: 'orders', 
         loadComponent: () => import('./components/admin/orders/orders').then(m => m.AdminOrdersComponent) 
+      },
+      { 
+        path: 'tickets', 
+        loadComponent: () => import('./components/admin/tickets/admin-tickets').then(m => m.AdminTicketsComponent) 
       },
       { 
         path: 'products', 

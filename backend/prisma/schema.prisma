@@ -457,3 +457,47 @@ model StockMovementLog {
 
   @@index([productId])
 }
+
+model ServiceTicket {
+  id                      String    @id @default(uuid())
+  ticketNumber            String    @unique // Auto-generated e.g. "DHT-10001", "DHT-10002"
+  customerName            String
+  mobileNumber            String
+  deviceType              String    // e.g. "Laptop", "Desktop", "Printer", etc.
+  brand                   String
+  model                   String
+  problemDescription      String
+  dateReceived            DateTime  @default(now())
+  expectedDeliveryDate    DateTime
+  technicianName          String?   // For backward compatibility
+  assignedTechnician      String?   // Assigned technician name
+  estimatedCost           Float
+  notes                   String?
+  status                  String    @default("Received") // "Received" | "Diagnosing" | "Waiting For Approval" | "Waiting For Parts" | "Repair In Progress" | "Ready For Delivery" | "Delivered" | "Cancelled"
+  history                 String    // JSON array string tracking status transition history logs
+
+  // Enhanced fields
+  deviceSerialNumber      String?
+  accessoriesReceived     String?
+  estimatedCompletionDate DateTime?
+  actualCompletionDate    DateTime?
+  deliveryDate            DateTime?
+  paymentStatus           String    @default("Pending") // "Pending", "Paid", etc.
+  paymentAmount           Float?
+  customerSignature       String?   // Base64 signature image drawing data or text
+  priority                String    @default("Medium")  // "Low" | "Medium" | "High" | "Urgent"
+  deviceCondition         String?   // e.g. "Good", "Scratched", etc.
+
+  // Future Compatibility Fields (Loose Foreign Keys)
+  serialNumber            String?   // Connects to ProductSerialNumber/Warranty
+  amcId                   String?   // Connects to AMC contract
+  userId                  String?   // Connects to User (Customer Account)
+
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([status])
+  @@index([mobileNumber])
+  @@index([ticketNumber])
+}
+

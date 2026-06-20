@@ -7,11 +7,14 @@ import { Title, Meta } from '@angular/platform-browser';
 import { ProductService, Product, Category, Brand } from '../../services/product.service';
 import { LanguageService } from '../../services/language.service';
 import { ProductCardComponent } from '../product-card/product-card';
+import { CompareService } from '../../services/compare.service';
+import { RecentlyViewedComponent } from '../recently-viewed/recently-viewed';
+import { TrustSectionComponent } from '../trust-section/trust-section';
 
 @Component({
   selector: 'app-shop',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ProductCardComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ProductCardComponent, RecentlyViewedComponent, TrustSectionComponent],
   templateUrl: './shop.html',
 })
 export class ShopComponent implements OnInit {
@@ -21,6 +24,7 @@ export class ShopComponent implements OnInit {
   private router = inject(Router);
   private title = inject(Title);
   private meta = inject(Meta);
+  compareService = inject(CompareService);
 
   // Data
   products = signal<Product[]>([]);
@@ -87,15 +91,15 @@ export class ShopComponent implements OnInit {
   }
 
   updateSeoTags() {
-    let titleStr = 'Shop Computer Components & Services | Sri Pavan Computers';
+    let titleStr = 'Shop Computer Components & Services |  DIGITAL HUB';
     let descStr = 'Browse our wide range of computing components, peripherals, custom PCs, and professional services. Genuine warranty and GST invoices on all purchases.';
     
     const catSlug = this.selectedCategory();
     if (catSlug) {
       const catObj = this.categories().find(c => c.slug === catSlug);
       if (catObj) {
-        titleStr = `Buy ${catObj.name} Online - Best Prices | Sri Pavan Computers`;
-        descStr = `Purchase premium ${catObj.name} products at Sri Pavan Computers. Get genuine brand warranty, fast shipping, and tax invoice options.`;
+        titleStr = `Buy ${catObj.name} Online - Best Prices |  DIGITAL HUB`;
+        descStr = `Purchase premium ${catObj.name} products at  DIGITAL HUB. Get genuine brand warranty, fast shipping, and tax invoice options.`;
       }
     }
     
@@ -103,13 +107,13 @@ export class ShopComponent implements OnInit {
     if (brandSlug) {
       const brandObj = this.brands().find(b => b.slug === brandSlug);
       if (brandObj) {
-        titleStr = `${brandObj.name} Products Store | Sri Pavan Computers`;
+        titleStr = `${brandObj.name} Products Store |  DIGITAL HUB`;
         descStr = `Explore computing hardware and products from ${brandObj.name}. Order online with official brand warranty.`;
       }
     }
     
     if (this.searchQuery()) {
-      titleStr = `Search results for "${this.searchQuery()}" | Sri Pavan Computers`;
+      titleStr = `Search results for "${this.searchQuery()}" |  DIGITAL HUB`;
     }
 
     this.title.setTitle(titleStr);
@@ -177,5 +181,15 @@ export class ShopComponent implements OnInit {
         queryParamsHandling: 'merge',
       });
     }
+  }
+
+  getImageUrl(product: any): string {
+    try {
+      const parsed = JSON.parse(product.images);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[0];
+      }
+    } catch (e) {}
+    return '/uploads/hero_banner.jpg';
   }
 }

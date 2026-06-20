@@ -1,0 +1,13 @@
+<div *ngIf="recentlyViewed().length > 0" class="space-y-6 pt-12 mt-12 border-t border-slate-100 dark:border-slate-800/80 animate-fade-in">
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-xl font-black uppercase tracking-tight text-slate-800 dark:text-slate-100">Recently Viewed</h2>
+      <p class="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold tracking-wider mt-1">Continue shopping where you left off</p>
+    </div>
+  </div>
+
+  <!-- Responsive Product Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+    <app-product-card *ngFor="let prod of recentlyViewed()" [product]="prod"></app-product-card>
+  </div>
+</div>

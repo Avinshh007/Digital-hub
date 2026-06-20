@@ -25,7 +25,7 @@ services:
       - "3001:3001"
     environment:
       - DATABASE_URL=postgresql://ecommers_admin:ecommers_password_secure_2026@postgres:5432/ecommers_db?schema=public
-      - JWT_SECRET=sri_pavan_computers_secret_jwt_key_secure_2026
+      - JWT_SECRET= _ DIGITAL HUB_computers_secret_jwt_key_secure_2026
       - PORT=3001
       - NODE_ENV=production
     depends_on:

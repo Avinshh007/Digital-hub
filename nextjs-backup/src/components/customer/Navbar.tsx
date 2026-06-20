@@ -98,7 +98,7 @@ export default function Navbar() {
               <span className={`font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent uppercase bg-gradient-to-r transition-all ${
                 scrolled ? 'from-blue-900 to-indigo-700' : 'from-amber-400 to-amber-300'
               }`}>
-                Sri Pavan
+                   DIGITAL HUB
               </span>
               <span className={`text-[10px] sm:text-xs tracking-widest font-semibold uppercase -mt-1 transition-all ${
                 scrolled ? 'text-slate-500' : 'text-slate-300'

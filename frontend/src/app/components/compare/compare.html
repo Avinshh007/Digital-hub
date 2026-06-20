@@ -1,0 +1,133 @@
+<div class="min-h-screen pt-24 pb-16 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 mb-8">
+      <div>
+        <h1 class="text-3xl font-black uppercase tracking-tight">Product Comparison</h1>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 uppercase font-semibold tracking-wider">
+          Compare specifications side-by-side to make the right choice
+        </p>
+      </div>
+      <a routerLink="/products" class="text-xs font-bold text-indigo-650 dark:text-indigo-400 hover:underline cursor-pointer">
+        ← Back to Shop
+      </a>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="compareItems().length === 0" class="glass-panel p-12 rounded-[2rem] text-center max-w-md mx-auto space-y-4 shadow-sm border border-slate-200/50 dark:border-slate-800">
+      <div class="text-4xl">⚖️</div>
+      <h2 class="text-lg font-black uppercase tracking-wider">No Products to Compare</h2>
+      <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold leading-relaxed">
+        Select products from the catalog to compare their pricing, performance, and key specifications.
+      </p>
+      <a routerLink="/products" class="inline-block px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer">
+        Browse Products
+      </a>
+    </div>
+
+    <!-- Comparison Table -->
+    <div *ngIf="compareItems().length > 0" class="overflow-x-auto glass-panel p-6 rounded-[2rem] border border-slate-200/60 dark:border-slate-800 shadow-sm">
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="border-b border-slate-200 dark:border-slate-800 pb-4">
+            <th class="w-1/5 text-left p-4 text-xs font-black uppercase tracking-widest text-slate-400">Specifications</th>
+            <th *ngFor="let item of compareItems()" class="w-1/4 p-4 text-center align-top relative group">
+              <!-- Remove button -->
+              <button (click)="removeItem(item.id)" class="absolute top-2 right-2 p-1.5 bg-rose-50 dark:bg-rose-950/30 text-rose-500 hover:bg-rose-100 rounded-full cursor-pointer transition-colors shadow-xs" title="Remove">
+                ✕
+              </button>
+              
+              <div class="space-y-3">
+                <div class="aspect-[4/3] bg-slate-50/50 dark:bg-slate-800/10 rounded-2xl p-3 flex items-center justify-center overflow-hidden">
+                  <img [src]="getImageUrl(item)" [alt]="item.name" class="max-h-24 object-contain" />
+                </div>
+                <div class="space-y-1">
+                  <h3 class="font-extrabold text-sm line-clamp-2 hover:text-indigo-650 transition-colors">{{ item.name }}</h3>
+                  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ item.sku }}</p>
+                </div>
+                <div class="text-base font-black text-slate-900 dark:text-white">
+                  ₹{{ item.price.toLocaleString('en-IN') }}
+                </div>
+                <button (click)="addToCart(item)" [disabled]="item.stock <= 0" [ngClass]="item.stock <= 0 ? 'bg-slate-250 text-slate-400 dark:bg-slate-800 dark:text-slate-600 cursor-not-allowed' : 'bg-blue-600 text-white dark:bg-amber-500 dark:text-blue-950 hover:bg-blue-700 dark:hover:bg-amber-400 cursor-pointer'" class="w-full py-2 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all">
+                  Add To Cart
+                </button>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-850">
+          <!-- Price row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Price</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-extrabold">
+              ₹{{ item.price.toLocaleString('en-IN') }}
+            </td>
+          </tr>
+          <!-- Brand row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Brand</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-semibold">
+              {{ item.brand?.name || 'SPC' }}
+            </td>
+          </tr>
+          <!-- CPU row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">CPU</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-medium">
+              {{ getSpec(item, 'CPU') }}
+            </td>
+          </tr>
+          <!-- GPU row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">GPU</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-medium">
+              {{ getSpec(item, 'GPU') }}
+            </td>
+          </tr>
+          <!-- RAM row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">RAM</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-medium">
+              {{ getSpec(item, 'RAM') }}
+            </td>
+          </tr>
+          <!-- Storage row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Storage</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-medium">
+              {{ getSpec(item, 'Storage') }}
+            </td>
+          </tr>
+          <!-- Display row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Display</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-medium">
+              {{ getSpec(item, 'Display') }}
+            </td>
+          </tr>
+          <!-- Warranty row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Warranty</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm font-medium">
+              {{ item.warranty || getSpec(item, 'Warranty') }}
+            </td>
+          </tr>
+          <!-- Availability row -->
+          <tr>
+            <td class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Availability</td>
+            <td *ngFor="let item of compareItems()" class="p-4 text-center text-sm">
+              <span *ngIf="item.stock > 0" class="text-emerald-600 dark:text-emerald-400 font-bold">
+                In Stock ({{ item.stock }} available)
+              </span>
+              <span *ngIf="item.stock <= 0" class="text-rose-600 dark:text-rose-400 font-bold">
+                Out of Stock
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>

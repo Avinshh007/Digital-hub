@@ -18,7 +18,7 @@ export default function Footer() {
           {/* Column 1: Brand & Desc */}
           <div className="space-y-4">
             <Link href="/" className="flex flex-col">
-              <span className="font-extrabold text-xl text-white tracking-tight">SRI PAVAN COMPUTERS</span>
+              <span className="font-extrabold text-xl text-white tracking-tight"> DIGITAL HUB</span>
               <span className="text-xs tracking-widest text-amber-500 font-semibold uppercase">Electronics & Repairs</span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
@@ -98,12 +98,12 @@ export default function Footer() {
 
             <div className="flex items-center space-x-2.5">
               <Mail size={16} className="text-amber-500 shrink-0" />
-              <a href="mailto:info@sripavancomputers.com" className="hover:text-amber-400 transition-colors">info@sripavancomputers.com</a>
+              <a href="mailto:info@  DIGITAL HUBcomputers.com" className="hover:text-amber-400 transition-colors">info@  DIGITAL HUBcomputers.com</a>
             </div>
 
             <div className="flex items-center space-x-2.5 text-slate-500">
               <Clock size={16} className="text-slate-500 shrink-0" />
-              <span>Mon - Sat: 9:30 AM - 8:30 PM</span>
+              <span>Mon - Sat: 9:30 AM - 9:45 PM</span>
             </div>
           </div>
 
@@ -111,11 +111,11 @@ export default function Footer() {
 
         {/* Divider */}
         <div className="border-t border-slate-800 pt-6 flex flex-col md:flex-row justify-between items-center text-xs text-slate-500">
-          <p>© {currentYear} Sri Pavan Computers. All rights reserved.</p>
+          <p>© {currentYear}  DIGITAL HUB. All rights reserved.</p>
           <div className="flex space-x-4 mt-2 md:mt-0">
             <span>Secure Checkout with SSL</span>
             <span>•</span>
-            <span>Made for Sri Pavan Computers, Kakinada</span>
+            <span>Made for  DIGITAL HUB, Kakinada</span>
           </div>
         </div>
 

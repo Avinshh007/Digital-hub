@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 import { Response } from 'express';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sri_pavan_computers_secret_jwt_key_secure_2026';
+const JWT_SECRET = process.env.JWT_SECRET || ' _ DIGITAL HUB_computers_secret_jwt_key_secure_2026';
 
 // Password hashing
 export function hashPassword(password: string): string {

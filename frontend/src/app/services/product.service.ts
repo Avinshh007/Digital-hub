@@ -78,6 +78,9 @@ export class ProductService {
     sortBy?: string;
     page?: number;
     limit?: number;
+    stockStatus?: string;
+    source?: string;
+    threshold?: number;
   } = {}): Promise<{ products: Product[]; categories: Category[]; brands: Brand[]; total: number; page: number; limit: number }> {
     let params = new HttpParams();
     if (filters.q) params = params.set('q', filters.q);
@@ -89,9 +92,32 @@ export class ProductService {
     if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
     if (filters.page) params = params.set('page', filters.page.toString());
     if (filters.limit) params = params.set('limit', filters.limit.toString());
+    if (filters.stockStatus) params = params.set('stockStatus', filters.stockStatus);
+    if (filters.source) params = params.set('source', filters.source);
+    if (filters.threshold !== undefined) params = params.set('threshold', filters.threshold.toString());
 
     return firstValueFrom(
       this.http.get<{ products: Product[]; categories: Category[]; brands: Brand[]; total: number; page: number; limit: number }>(`${this.apiUrl}/products`, { params })
+    );
+  }
+
+  // GET /api/products/inventory/stats (Admin only)
+  async getInventoryStats(threshold: number = 5): Promise<{
+    totalProducts: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
+    totalQty: number;
+    totalValue: number;
+  }> {
+    const params = new HttpParams().set('threshold', threshold.toString());
+    return firstValueFrom(
+      this.http.get<{
+        totalProducts: number;
+        lowStockProducts: number;
+        outOfStockProducts: number;
+        totalQty: number;
+        totalValue: number;
+      }>(`${this.apiUrl}/products/inventory/stats`, { params, withCredentials: true })
     );
   }
 
@@ -213,6 +239,23 @@ export class ProductService {
   async autoAssignProductImages(): Promise<any> {
     return firstValueFrom(
       this.http.post<any>(`${this.apiUrl}/products/import/auto-assign-images`, {}, { withCredentials: true })
+    );
+  }
+
+  // GET /api/products/:id/recommendations – fetch product alternatives and recommendations
+  async getProductRecommendations(id: string): Promise<{
+    similar: Product[];
+    budget: Product[];
+    better: Product[];
+    performance: Product[];
+  }> {
+    return firstValueFrom(
+      this.http.get<{
+        similar: Product[];
+        budget: Product[];
+        better: Product[];
+        performance: Product[];
+      }>(`${this.apiUrl}/products/${id}/recommendations`, { withCredentials: true })
     );
   }
 }

@@ -26,16 +26,16 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
-      email: 'admin@sripavan.com',
+      email: 'admin@  DIGITAL HUB.com',
       passwordHash: adminPasswordHash,
-      name: 'Admin - Sri Pavan Computers',
+      name: 'Admin -  DIGITAL HUB',
       role: 'ADMIN',
     },
   });
 
   const customer = await prisma.user.create({
     data: {
-      email: 'customer@sripavan.com',
+      email: 'customer@  DIGITAL HUB.com',
       passwordHash: customerPasswordHash,
       name: 'Avinash',
       role: 'CUSTOMER',
@@ -85,7 +85,7 @@ async function main() {
     { name: 'MSI', slug: 'msi', logo: '/uploads/brand_msi.png' },
     { name: 'ASUS', slug: 'asus', logo: '/uploads/brand_asus.png' },
     { name: 'Corsair', slug: 'corsair', logo: '/uploads/brand_corsair.png' },
-    { name: 'Sri Pavan Custom', slug: 'sri-pavan-custom', logo: '/uploads/brand_spc.png' },
+    { name: ' DIGITAL HUBCustom', slug: ' - DIGITAL HUB-custom', logo: '/uploads/brand_spc.png' },
     { name: 'Acer', slug: 'acer', logo: '/uploads/brand_acer.png' },
     { name: 'Apple', slug: 'apple', logo: '/uploads/brand_apple.png' },
     { name: 'LG', slug: 'lg', logo: '/uploads/brand_lg.png' },
@@ -183,7 +183,7 @@ async function main() {
     },
     // Desktops (Prebuilt)
     {
-      name: 'Sri Pavan Office Desktop PC (Intel Core i5)',
+      name: ' DIGITAL HUBOffice Desktop PC (Intel Core i5)',
       description: 'Assembled office desktop computer built for multitasking and high performance. Featuring an Intel Core i5 processor, 16GB RAM, and dual storage (SSD + HDD) for speed and storage.',
       price: 24500,
       originalPrice: 32000,
@@ -191,7 +191,7 @@ async function main() {
       sku: 'SPC-OFFICE-I5',
       gstRate: 18.0,
       categoryId: categories['desktops'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/prod_desktop_office.jpg']),
       specs: JSON.stringify({
         Processor: 'Intel Core i5-10400 (up to 4.3 GHz, 6 Cores)',
@@ -293,7 +293,7 @@ async function main() {
       sku: 'MB-GB-B760M',
       gstRate: 18.0,
       categoryId: categories['motherboards'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/parts_mb_b760.jpg']),
       specs: JSON.stringify({ Socket: 'LGA1700', Chipset: 'Intel B760', FormFactor: 'Micro-ATX', RAMType: 'DDR5 Quad Channel', PCIeSlots: '1 x PCIe 4.0 x16', Storage: '2 x M.2 Gen4 Slots', Wireless: 'Wi-Fi 6E + BT 5.3' }),
       rating: 4.6,
@@ -355,7 +355,7 @@ async function main() {
       sku: 'RAM-GSK-16G-D5',
       gstRate: 18.0,
       categoryId: categories['memory'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/parts_ram_d5.jpg']),
       specs: JSON.stringify({ Capacity: '16 GB (1 x 16GB)', Speed: '6000 MHz', Type: 'DDR5', Latency: 'CL36-36-36-96', Heatspreader: 'Aluminum', Voltage: '1.35V' }),
       rating: 4.7,
@@ -402,7 +402,7 @@ async function main() {
       sku: 'GPU-ZOTAC-4070S',
       gstRate: 18.0,
       categoryId: categories['graphics-cards'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/parts_gpu_4070.jpg']),
       specs: JSON.stringify({ CoreClock: 'Boost 2475 MHz', Memory: '12GB GDDR6X (21 Gbps)', Bus: '192-bit', Ports: '1x HDMI 2.1a, 3x DisplayPort 1.4a', RecommendedPSU: '650W' }),
       rating: 4.9,
@@ -419,7 +419,7 @@ async function main() {
       sku: 'PSU-DP-PF450',
       gstRate: 18.0,
       categoryId: categories['power-supplies'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/parts_psu_pf450.jpg']),
       specs: JSON.stringify({ Wattage: '450 Watts', Certification: '80 Plus Standard', FanSize: '120mm Silent Fan', Connectors: '1x 24-Pin, 1x EPS 8-Pin, 1x PCIe 6+2 Pin, 6x SATA' }),
       rating: 4.2,
@@ -466,7 +466,7 @@ async function main() {
       sku: 'CAB-AE-ICE100',
       gstRate: 18.0,
       categoryId: categories['cabinets'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/parts_cab_ice100.jpg']),
       specs: JSON.stringify({ FormFactor: 'Mid Tower', MotherboardSupport: 'ATX, Micro-ATX, Mini-ITX', SidePanel: 'Tempered Glass', PreinstalledFans: '3 x 120mm RGB (Front), 1 x 120mm (Rear)', DustFilters: 'Magnetic Top Filter' }),
       rating: 4.3,
@@ -498,7 +498,7 @@ async function main() {
       sku: 'SSD-CRU-P3-1TB',
       gstRate: 18.0,
       categoryId: categories['storage'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/parts_ssd_p3.jpg']),
       specs: JSON.stringify({ Capacity: '1 TB', FormFactor: 'M.2 2280', Interface: 'NVMe PCIe Gen 3.0 x4', ReadSpeed: 'Up to 3500 MB/s', WriteSpeed: 'Up to 3000 MB/s', Warranty: '5 Years Warranty' }),
       rating: 4.7,
@@ -508,14 +508,14 @@ async function main() {
     // 8. Custom PC Assembly & Testing Service (Special Item)
     {
       name: 'Custom PC Assembly & Testing Service',
-      description: 'Professional desktop components assembly, neat cable management, BIOS flashing, hardware stress testing, and OS driver installation by certified Sri Pavan Computers technicians.',
+      description: 'Professional desktop components assembly, neat cable management, BIOS flashing, hardware stress testing, and OS driver installation by certified  DIGITAL HUBtechnicians.',
       price: 999,
       originalPrice: 2000,
       stock: 999,
       sku: 'SPC-ASSY-SRV',
       gstRate: 18.0,
       categoryId: categories['accessories'].id,
-      brandId: brands['sri-pavan-custom'].id,
+      brandId: brands[' - DIGITAL HUB-custom'].id,
       images: JSON.stringify(['/uploads/assy_service.jpg']),
       specs: JSON.stringify({ Service: 'Assembled & Tested', Scope: 'Cabinet Assembly, Thermal Pasting, Cable Management, 24-hr Stress Test, BIOS Update', Timeframe: '24-48 Hours' }),
       rating: 5.0,
@@ -1053,7 +1053,7 @@ async function main() {
       userId: customer.id,
       userName: customer.name,
       rating: 5,
-      comment: 'Excellent laptop! Extremely fast booting and good battery backup. Sri Pavan Computers also helped me set it up and gave a free laptop sleeve. Highly recommended shop!',
+      comment: 'Excellent laptop! Extremely fast booting and good battery backup.  DIGITAL HUBalso helped me set it up and gave a free laptop sleeve. Highly recommended shop!',
     },
   });
 
@@ -1061,7 +1061,7 @@ async function main() {
   const heroBanners = [
     {
       imageUrl: '/uploads/hero_banner.jpg',
-      title: 'Sri Pavan Computers',
+      title: ' DIGITAL HUB',
       subtitle: 'Premium Electronics & Computer Repair Store at Best Prices',
       linkUrl: '/products',
     },

@@ -49,12 +49,12 @@ export async function generateInvoicePDF(orderId: string, res: Response): Promis
     // Header Section
     doc.fillColor(primaryColor)
        .fontSize(20)
-       .text('SRI PAVAN COMPUTERS', 50, 45);
+       .text(' DIGITAL HUB', 50, 45);
     
     doc.fillColor(secondaryColor)
        .fontSize(9)
        .text('Krishna Kanth Plaza, R R Road, Kakinada, AP - 533001', 50, 70)
-       .text('Phone: +91 98482 57578 | Email: sales@sripavan.com', 50, 82)
+       .text('Phone: +91 98482 57578 | Email: sales@  DIGITAL HUB.com', 50, 82)
        .text('GSTIN: 37AAAAA0000A1Z0 (Sample)', 50, 94);
 
     doc.fillColor(primaryColor)

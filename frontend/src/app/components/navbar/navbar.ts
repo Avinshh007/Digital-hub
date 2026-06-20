@@ -24,7 +24,7 @@ import { ThemeService } from '../../services/theme.service';
             <a routerLink="/" class="flex flex-col">
               <span [ngClass]="scrolled() ? 'from-blue-900 to-indigo-700' : 'from-amber-400 to-amber-300'" 
                     class="font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent uppercase bg-gradient-to-r transition-all">
-                Sri Pavan
+                   DIGITAL HUB
               </span>
               <span [ngClass]="scrolled() ? 'text-slate-500' : 'text-slate-300'" 
                     class="text-[10px] sm:text-xs tracking-widest font-semibold uppercase -mt-1 transition-all">
@@ -58,6 +58,7 @@ import { ThemeService } from '../../services/theme.service';
               <a routerLink="/products" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">{{ t().shop }}</a>
               <a routerLink="/pc-builder" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">PC Builder</a>
               <a routerLink="/warranty" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">Warranty Check</a>
+              <a routerLink="/track-repair" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">Track Repair</a>
               <a routerLink="/about" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">{{ t().aboutUs }}</a>
               <a routerLink="/contact" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">{{ t().contactUs }}</a>
               <a routerLink="/faq" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">{{ t().faq }}</a>
@@ -192,6 +193,7 @@ import { ThemeService } from '../../services/theme.service';
         <div class="flex flex-col space-y-3 font-semibold text-sm">
           <a routerLink="/products" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors">{{ t().shop }}</a>
           <a routerLink="/pc-builder" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors">PC Builder</a>
+          <a routerLink="/track-repair" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors">Track Repair</a>
           <a routerLink="/wishlist" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors flex items-center justify-between">
             <span>{{ t().wishlist }}</span>
             <span *ngIf="wishlistCount() > 0" class="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{{ wishlistCount() }}</span>

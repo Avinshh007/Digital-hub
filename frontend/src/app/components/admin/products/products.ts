@@ -1,5 +1,5 @@
 // src/app/components/admin/products/products.ts
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService, Product, Category, Brand } from '../../../services/product.service';
@@ -17,6 +17,84 @@ export class AdminProductsComponent implements OnInit {
   categories = signal<Category[]>([]);
   brands = signal<Brand[]>([]);
   loading = signal(true);
+
+  // Filter & Search Signals
+  adminSearchQuery = signal<string>('');
+  adminCategory = signal<string>('');
+  adminBrand = signal<string>('');
+  adminSource = signal<string>('');
+  adminStockStatus = signal<string>('');
+  adminSortBy = signal<string>('createdAt');
+  adminPage = signal<number>(1);
+  adminPageSize = signal<number>(15);
+  lowStockThreshold = signal<number>(5);
+  totalProductsCount = signal<number>(0);
+  showMobileFilters = signal<boolean>(false);
+  adminView = signal<'grid' | 'table'>('grid');
+
+  // Summary Dashboard Stats
+  stats = signal<{
+    totalProducts: number;
+    lowStockProducts: number;
+    outOfStockProducts: number;
+    totalQty: number;
+    totalValue: number;
+  } | null>(null);
+
+  // Inventory Health Status Indicator
+  inventoryHealth = computed(() => {
+    const s = this.stats();
+    if (!s || s.totalProducts === 0) {
+      return {
+        label: 'Excellent',
+        color: 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/50 dark:text-emerald-400',
+        circleColor: 'bg-emerald-500',
+        desc: 'All catalog items are fully stocked.'
+      };
+    }
+    if (s.outOfStockProducts > 0) {
+      return {
+        label: 'Critical',
+        color: 'text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900/50 dark:text-rose-400',
+        circleColor: 'bg-rose-500',
+        desc: 'Some catalog items are out of stock.'
+      };
+    }
+    const lowRatio = s.lowStockProducts / s.totalProducts;
+    if (lowRatio < 0.05) {
+      return {
+        label: 'Excellent',
+        color: 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/50 dark:text-emerald-400',
+        circleColor: 'bg-emerald-500',
+        desc: 'No out-of-stock and < 5% low stock.'
+      };
+    }
+    if (lowRatio < 0.10) {
+      return {
+        label: 'Good',
+        color: 'text-indigo-600 bg-indigo-50 border-indigo-200 dark:bg-indigo-950/20 dark:border-indigo-900/50 dark:text-indigo-400',
+        circleColor: 'bg-indigo-500',
+        desc: 'Low stock items represent < 10%.'
+      };
+    }
+    return {
+      label: 'Needs Attention',
+      color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/50 dark:text-amber-400',
+      circleColor: 'bg-amber-500',
+      desc: 'More than 10% of items are low in stock.'
+    };
+  });
+
+  // Modal View States
+  showLowStockModal = signal(false);
+  showOutOfStockModal = signal(false);
+  showDetailModal = signal(false);
+  quickViewProducts = signal<Product[]>([]);
+  selectedProductDetails = signal<Product | null>(null);
+
+  // Inline Stock Edit State
+  editingStockProductId = signal<string | null>(null);
+  inlineStockValue = signal<number>(0);
 
   // View States
   activeTab = signal<'inventory' | 'import'>('inventory');
@@ -56,6 +134,7 @@ export class AdminProductsComponent implements OnInit {
   uploadedImages = signal<string[]>([]);
   isDragging = signal(false);
   uploadingImages = signal(false);
+  Math = Math;
 
   // Bulk Import Fields
   importMode = 'CREATE_AND_UPDATE';
@@ -86,14 +165,222 @@ export class AdminProductsComponent implements OnInit {
   async loadAdminInventory() {
     this.loading.set(true);
     try {
-      const data = await this.productService.getProducts();
+      const data = await this.productService.getProducts({
+        q: this.adminSearchQuery(),
+        category: this.adminCategory(),
+        brand: this.adminBrand(),
+        source: this.adminSource(),
+        stockStatus: this.adminStockStatus(),
+        sortBy: this.adminSortBy(),
+        page: this.adminPage(),
+        limit: this.adminPageSize(),
+        threshold: this.lowStockThreshold()
+      });
+
       this.products.set(data.products || []);
       this.categories.set(data.categories || []);
       this.brands.set(data.brands || []);
+      this.totalProductsCount.set(data.total || 0);
+
+      // Fetch summary stats
+      const statsData = await this.productService.getInventoryStats(this.lowStockThreshold());
+      this.stats.set(statsData);
     } catch (e) {
       console.error(e);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  applyFilters() {
+    this.adminPage.set(1);
+    this.loadAdminInventory();
+  }
+
+  resetAdminFilters() {
+    this.adminSearchQuery.set('');
+    this.adminCategory.set('');
+    this.adminBrand.set('');
+    this.adminSource.set('');
+    this.adminStockStatus.set('');
+    this.adminSortBy.set('createdAt');
+    this.adminPage.set(1);
+    this.loadAdminInventory();
+  }
+
+  goToPage(page: number) {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.adminPage.set(page);
+      this.loadAdminInventory();
+    }
+  }
+
+  totalPages() {
+    return Math.ceil(this.totalProductsCount() / this.adminPageSize());
+  }
+
+  // Quick View Dashboard Click Handlers
+  async openQuickView(type: 'low' | 'out') {
+    try {
+      const data = await this.productService.getProducts({
+        stockStatus: type === 'low' ? 'lowStock' : 'outOfStock',
+        threshold: this.lowStockThreshold(),
+        limit: 1000,
+        page: 1
+      });
+      this.quickViewProducts.set(data.products || []);
+      if (type === 'low') {
+        this.showLowStockModal.set(true);
+      } else {
+        this.showOutOfStockModal.set(true);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Failed to load quick view data.');
+    }
+  }
+
+  // Inline Stock Edit Handlers
+  startInlineStockEdit(prod: Product) {
+    this.editingStockProductId.set(prod.id);
+    this.inlineStockValue.set(prod.stock);
+  }
+
+  cancelInlineStockEdit() {
+    this.editingStockProductId.set(null);
+  }
+
+  async saveInlineStock(prod: Product) {
+    const val = this.inlineStockValue();
+    if (val < 0) {
+      alert('Stock quantity cannot be negative.');
+      return;
+    }
+    try {
+      await this.productService.updateProduct(prod.id, { stock: val });
+      this.editingStockProductId.set(null);
+      this.loadAdminInventory();
+    } catch (e: any) {
+      alert(e.error || 'Failed to update stock quantity.');
+    }
+  }
+
+  // Product Duplication
+  duplicateProduct(prod: Product) {
+    this.isEditing.set(false);
+    this.editingProductId.set(null);
+
+    this.name = `${prod.name} (Copy)`;
+    this.description = prod.description;
+    this.price = prod.price;
+    this.originalPrice = prod.originalPrice;
+    this.stock = prod.stock;
+    this.sku = `${prod.sku}-COPY`;
+    this.categoryId = prod.categoryId;
+    this.brandId = prod.brandId;
+    this.gstRate = prod.gstRate;
+    this.subcategory = prod.subcategory || '';
+    this.warranty = prod.warranty || '';
+    this.modelNumber = prod.modelNumber || '';
+    this.seoTitle = prod.seoTitle || '';
+    this.seoDescription = prod.seoDescription || '';
+    this.source = 'MANUAL';
+
+    this.lockDescription = prod.lockDescription;
+    this.lockImages = prod.lockImages;
+    this.lockSpecs = prod.lockSpecs;
+    this.lockPrice = prod.lockPrice;
+    this.lockStock = prod.lockStock;
+    this.lockSeo = prod.lockSeo;
+
+    try {
+      const parsedSpecs = JSON.parse(prod.specs);
+      this.specsList = Object.keys(parsedSpecs).map(k => ({
+        key: k,
+        value: parsedSpecs[k]
+      }));
+    } catch (e) {
+      this.specsList = [];
+    }
+
+    try {
+      const parsedImages = JSON.parse(prod.images);
+      this.uploadedImages.set(Array.isArray(parsedImages) ? parsedImages : []);
+    } catch (e) {
+      this.uploadedImages.set([]);
+    }
+
+    this.showForm.set(true);
+  }
+
+  // Detail Modal Handlers
+  openDetailModal(prod: Product) {
+    this.selectedProductDetails.set(prod);
+    this.showDetailModal.set(true);
+  }
+
+  closeDetailModal() {
+    this.showDetailModal.set(false);
+    this.selectedProductDetails.set(null);
+  }
+
+  // CSV/Excel Exporter
+  async exportFilteredData(format: 'csv' | 'xlsx') {
+    try {
+      const data = await this.productService.getProducts({
+        q: this.adminSearchQuery(),
+        category: this.adminCategory(),
+        brand: this.adminBrand(),
+        source: this.adminSource(),
+        stockStatus: this.adminStockStatus(),
+        sortBy: this.adminSortBy(),
+        page: 1,
+        limit: 100000,
+        threshold: this.lowStockThreshold()
+      });
+
+      const exportProducts = data.products || [];
+      if (exportProducts.length === 0) {
+        alert('No filtered records available to export.');
+        return;
+      }
+
+      const headers = ['SKU', 'Product Name', 'Category', 'Brand', 'Stock', 'Price', 'Source', 'Updated Date', 'Last Sync Timestamp'];
+      const rows = exportProducts.map(p => [
+        p.sku,
+        p.name,
+        p.category ? p.category.name : 'N/A',
+        p.brand ? p.brand.name : 'N/A',
+        p.stock.toString(),
+        p.price.toString(),
+        p.source,
+        (p as any).updatedAt || p.createdAt || 'N/A',
+        'N/A' // Last Sync Timestamp (future field placeholder)
+      ]);
+
+      const escapeCSVValue = (val: string) => {
+        const clean = val.replace(/"/g, '""');
+        return `"${clean}"`;
+      };
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(r => r.map(escapeCSVValue).join(','))
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const ext = format === 'csv' ? 'csv' : 'xls';
+      link.setAttribute('href', url);
+      link.setAttribute('download', `inventory_export_${new Date().toISOString().slice(0, 10)}.${ext}`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error(e);
+      alert('Export failed');
     }
   }
 
@@ -562,4 +849,19 @@ export class AdminProductsComponent implements OnInit {
       this.autoAssigning.set(false);
     }
   }
+
+  getMin(a: number, b: number): number {
+    return Math.min(a, b);
+  }
+
+  getProductImageUrl(imagesJson: string): string {
+    try {
+      const parsed = JSON.parse(imagesJson);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[0];
+      }
+    } catch (e) {}
+    return '/uploads/hero_banner.jpg';
+  }
 }
+

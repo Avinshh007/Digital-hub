@@ -19,6 +19,8 @@ import { expenseRouter } from './expenses';
 import { warrantyRouter } from './warranty';
 import { amcRouter } from './amc';
 import { pcBuilderRouter } from './pcbuilder';
+import { aiAssistantRouter } from './ai-assistant';
+import { ticketsRouter } from './tickets';
 import { logAudit } from './audit';
 import { getAutoAssignedImage } from './images-pool';
 
@@ -27,8 +29,8 @@ const PORT = process.env.PORT || 3001;
 
 // Initialize Razorpay client
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_sripavanelectronics',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_sripavanelectronics',
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_  DIGITAL HUBelectronics',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_  DIGITAL HUBelectronics',
 });
 
 // In-memory OTP storage for registration email verification
@@ -209,7 +211,7 @@ app.post('/api/auth/register', authLimiter, async (req: Request, res: Response) 
     // SIMULATED EMAIL NOTIFICATION
     console.log(`\n======================================================`);
     console.log(`[EMAIL SIMULATOR] To: ${emailClean}`);
-    console.log(`Subject: Verify Your Account - Sri Pavan Computers`);
+    console.log(`Subject: Verify Your Account -  DIGITAL HUB`);
     console.log(`Your verification code is: ${otp}`);
     console.log(`======================================================\n`);
 
@@ -268,7 +270,7 @@ app.post('/api/auth/verify-email', async (req: Request, res: Response) => {
     await prisma.notification.create({
       data: {
         userId: user.id,
-        title: 'Welcome to Sri Pavan Computers!',
+        title: 'Welcome to  DIGITAL HUB!',
         message: `Hello ${user.name}, your account is verified. Happy shopping!`,
         type: 'SYSTEM'
       }
@@ -389,7 +391,7 @@ app.post('/api/auth/forgot-password', authLimiter, async (req: Request, res: Res
     // SIMULATED EMAIL
     console.log(`\n======================================================`);
     console.log(`[EMAIL SIMULATOR] To: ${emailClean}`);
-    console.log(`Subject: Password Reset Request - Sri Pavan Computers`);
+    console.log(`Subject: Password Reset Request -  DIGITAL HUB`);
     console.log(`Reset link: http://localhost:4200/reset-password?token=${token}`);
     console.log(`======================================================\n`);
 
@@ -869,31 +871,89 @@ app.delete('/api/wishlist/:productId', authenticate, async (req: Request, res: R
 // GET /api/products
 app.get('/api/products', async (req: Request, res: Response) => {
   try {
-    const query = (req.query.q as string) || '';
+    let query = ((req.query.q as string) || '').trim();
     const category = (req.query.category as string) || '';
     const brand = (req.query.brand as string) || '';
     const minPrice = parseFloat((req.query.minPrice as string) || '0');
-    const maxPrice = parseFloat((req.query.maxPrice as string) || '9999999');
+    let maxPrice = parseFloat((req.query.maxPrice as string) || '9999999');
     const inStock = req.query.inStock === 'true';
     const sortBy = (req.query.sortBy as string) || 'createdAt';
     const page = parseInt((req.query.page as string) || '1');
     const limit = parseInt((req.query.limit as string) || '12');
     const skip = (page - 1) * limit;
 
+    const source = (req.query.source as string) || '';
+    const stockStatus = (req.query.stockStatus as string) || '';
+    const threshold = parseInt((req.query.threshold as string) || '5');
+
+    // Fetch product count before filtering (active products in the catalog)
+    const countBefore = await prisma.product.count({
+      where: {
+        status: 'ACTIVE'
+      }
+    });
+
     const where: any = {
       status: 'ACTIVE',
-      price: {
-        gte: minPrice,
-        lte: maxPrice,
-      },
+    };
+
+    // Advanced search query parser (Simple and deterministic)
+    let specRamFilter = '';
+    let specStorageFilter = '';
+
+    if (query) {
+      // 1. Match price constraints like "under 5000", "below 10000"
+      const underMatch = query.match(/(?:under|below|less than)\s*(?:₹|rs\.?|)?\s*(\d+)/i);
+      if (underMatch) {
+        maxPrice = Math.min(maxPrice, parseFloat(underMatch[1]));
+        query = query.replace(/(?:under|below|less than)\s*(?:₹|rs\.?|)?\s*\d+/i, '').replace(/\s+/g, ' ').trim();
+      }
+
+      // 2. Match spec constraints like "16GB RAM"
+      const ramMatch = query.match(/(\d+)\s*(?:gb|GB)\s*ram/i);
+      if (ramMatch) {
+        specRamFilter = ramMatch[1] + 'GB';
+        query = query.replace(/\d+\s*(?:gb|GB)\s*ram/i, '').replace(/\s+/g, ' ').trim();
+      }
+
+      // 3. Match spec constraints like "512GB SSD" or "1TB SSD"
+      const ssdMatch = query.match(/(\d+)\s*(?:gb|gb\s+|tb|tb\s+)?ssd/i);
+      if (ssdMatch) {
+        const isTb = query.toLowerCase().includes('tb');
+        specStorageFilter = ssdMatch[1] + (isTb ? 'TB' : 'GB') + ' SSD';
+        query = query.replace(/\d+\s*(?:gb|gb\s+|tb|tb\s+)?ssd/i, '').replace(/\s+/g, ' ').trim();
+      }
+    }
+
+    where.price = {
+      gte: minPrice,
+      lte: maxPrice,
     };
 
     if (query) {
       where.OR = [
-        { name: { contains: query } },
-        { description: { contains: query } },
-        { sku: { contains: query } },
+        { name: { contains: query, mode: 'insensitive' } },
+        { sku: { contains: query, mode: 'insensitive' } },
+        { brand: { name: { contains: query, mode: 'insensitive' } } },
+        { category: { name: { contains: query, mode: 'insensitive' } } },
+        { specs: { contains: query, mode: 'insensitive' } },
       ];
+    }
+
+    if (specRamFilter) {
+      where.specs = { contains: specRamFilter, mode: 'insensitive' };
+    }
+
+    if (specStorageFilter) {
+      if (where.specs) {
+        const existingContains = where.specs.contains;
+        where.AND = where.AND || [];
+        where.AND.push({ specs: { contains: existingContains, mode: 'insensitive' } });
+        where.AND.push({ specs: { contains: specStorageFilter, mode: 'insensitive' } });
+        delete where.specs;
+      } else {
+        where.specs = { contains: specStorageFilter, mode: 'insensitive' };
+      }
     }
 
     if (category) {
@@ -914,7 +974,17 @@ app.get('/api/products', async (req: Request, res: Response) => {
       }
     }
 
-    if (inStock) {
+    if (source) {
+      where.source = source;
+    }
+
+    if (stockStatus === 'inStock') {
+      where.stock = { gt: 0 };
+    } else if (stockStatus === 'lowStock') {
+      where.stock = { gt: 0, lte: threshold };
+    } else if (stockStatus === 'outOfStock') {
+      where.stock = 0;
+    } else if (inStock) {
       where.stock = { gt: 0 };
     }
 
@@ -923,6 +993,16 @@ app.get('/api/products', async (req: Request, res: Response) => {
       orderBy = { price: 'asc' };
     } else if (sortBy === 'price_desc') {
       orderBy = { price: 'desc' };
+    } else if (sortBy === 'name_asc') {
+      orderBy = { name: 'asc' };
+    } else if (sortBy === 'name_desc') {
+      orderBy = { name: 'desc' };
+    } else if (sortBy === 'stock_asc') {
+      orderBy = { stock: 'asc' };
+    } else if (sortBy === 'stock_desc') {
+      orderBy = { stock: 'desc' };
+    } else if (sortBy === 'updatedAt_desc') {
+      orderBy = { updatedAt: 'desc' };
     } else if (sortBy === 'rating') {
       orderBy = { rating: 'desc' };
     } else if (sortBy === 'popularity') {
@@ -945,9 +1025,75 @@ app.get('/api/products', async (req: Request, res: Response) => {
     const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
     const brands = await prisma.brand.findMany({ orderBy: { name: 'asc' } });
 
+    // Temporary console logging as requested
+    console.log(`[Search Investigation] Search term: "${query}"`);
+    console.log(`[Search Investigation] Product count before filtering: ${countBefore}`);
+    console.log(`[Search Investigation] Product count after filtering: ${totalProducts}`);
+    console.log(`[Search Investigation] Fields being matched: product.name, brand, sku, category`);
+
     return res.json({ products, categories, brands, total: totalProducts, page, limit });
   } catch (error) {
     console.error('Fetch products error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/products/inventory/stats (Admin only)
+app.get('/api/products/inventory/stats', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const threshold = parseInt((req.query.threshold as string) || '5');
+
+    const totalProducts = await prisma.product.count({
+      where: { status: 'ACTIVE' }
+    });
+
+    const lowStockProducts = await prisma.product.count({
+      where: {
+        status: 'ACTIVE',
+        stock: {
+          gt: 0,
+          lte: threshold
+        }
+      }
+    });
+
+    const outOfStockProducts = await prisma.product.count({
+      where: {
+        status: 'ACTIVE',
+        stock: 0
+      }
+    });
+
+    const aggregateQty = await prisma.product.aggregate({
+      where: { status: 'ACTIVE' },
+      _sum: {
+        stock: true
+      }
+    });
+    const totalQty = aggregateQty._sum.stock || 0;
+
+    const products = await prisma.product.findMany({
+      where: { status: 'ACTIVE' },
+      select: {
+        stock: true,
+        price: true
+      }
+    });
+
+    let totalValue = 0;
+    products.forEach(p => {
+      totalValue += p.stock * p.price;
+    });
+
+    return res.json({
+      totalProducts,
+      lowStockProducts,
+      outOfStockProducts,
+      totalQty,
+      totalValue
+    });
+  } catch (error) {
+    console.error('Fetch inventory stats error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -975,6 +1121,97 @@ app.get('/api/products/:id', async (req: Request, res: Response) => {
     return res.json({ product });
   } catch (error) {
     console.error('Fetch product detail error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/products/:id/recommendations
+app.get('/api/products/:id/recommendations', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: { category: true, brand: true }
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // 1. Similar Products (same category, excluding current product, limit 4)
+    const similar = await prisma.product.findMany({
+      where: {
+        categoryId: product.categoryId,
+        id: { not: id },
+        status: 'ACTIVE'
+      },
+      take: 4,
+      orderBy: { rating: 'desc' },
+      include: { category: true, brand: true }
+    });
+
+    // 2. Budget Alternatives (same category, price < product.price, excluding current product, limit 4)
+    const budget = await prisma.product.findMany({
+      where: {
+        categoryId: product.categoryId,
+        price: { lt: product.price },
+        id: { not: id },
+        status: 'ACTIVE'
+      },
+      take: 4,
+      orderBy: { price: 'asc' },
+      include: { category: true, brand: true }
+    });
+
+    // 3. Better Alternatives / Higher Specs (same category, price > product.price, excluding current, limit 4)
+    const better = await prisma.product.findMany({
+      where: {
+        categoryId: product.categoryId,
+        price: { gt: product.price },
+        id: { not: id },
+        status: 'ACTIVE'
+      },
+      take: 4,
+      orderBy: [{ rating: 'desc' }, { price: 'asc' }],
+      include: { category: true, brand: true }
+    });
+
+    // 4. Performance Alternatives (same category, specs containing performance terms, excluding current, limit 4)
+    const performance = await prisma.product.findMany({
+      where: {
+        categoryId: product.categoryId,
+        id: { not: id },
+        status: 'ACTIVE',
+        OR: [
+          { name: { contains: '16GB', mode: 'insensitive' } },
+          { name: { contains: '32GB', mode: 'insensitive' } },
+          { name: { contains: 'i7', mode: 'insensitive' } },
+          { name: { contains: 'i9', mode: 'insensitive' } },
+          { name: { contains: 'Ryzen 7', mode: 'insensitive' } },
+          { name: { contains: 'Ryzen 9', mode: 'insensitive' } },
+          { name: { contains: 'RTX', mode: 'insensitive' } },
+          { specs: { contains: '16GB', mode: 'insensitive' } },
+          { specs: { contains: '32GB', mode: 'insensitive' } },
+          { specs: { contains: 'i7', mode: 'insensitive' } },
+          { specs: { contains: 'i9', mode: 'insensitive' } },
+          { specs: { contains: 'Ryzen 7', mode: 'insensitive' } },
+          { specs: { contains: 'Ryzen 9', mode: 'insensitive' } },
+          { specs: { contains: 'RTX', mode: 'insensitive' } }
+        ]
+      },
+      take: 4,
+      orderBy: { price: 'desc' },
+      include: { category: true, brand: true }
+    });
+
+    return res.json({
+      similar,
+      budget,
+      better,
+      performance
+    });
+  } catch (error) {
+    console.error('Fetch product recommendations error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1810,8 +2047,8 @@ app.post('/api/products/import/auto-assign-images', requireAdmin, async (req: Re
         lower.includes('logo') ||
         lower.includes('default') ||
         lower.includes('shop') ||
-        lower.includes('sri-pavan') ||
-        lower.includes('sri_pavan')
+        lower.includes(' - DIGITAL HUB') ||
+        lower.includes(' _ DIGITAL HUB')
       ) {
         return true;
       }
@@ -1896,7 +2133,7 @@ app.post('/api/products/import/auto-assign-images', requireAdmin, async (req: Re
       }
 
       const categorySlug = prod.category?.slug || 'other-electronics';
-      const brandSlug = prod.brand?.slug || 'sri-pavan-custom';
+      const brandSlug = prod.brand?.slug || ' - DIGITAL HUB-custom';
       
       const newImageUrl = getAutoAssignedImage(prod.name, brandSlug, categorySlug, prod.id, prod.sku);
 
@@ -2220,7 +2457,7 @@ app.post('/api/orders', authenticate, async (req: Request, res: Response) => {
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${shippingAddress.phone}`);
-    console.log(`Message: Sri Pavan Computers - Your order #${order.id.slice(0,8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Method: Cash On Delivery.`);
+    console.log(`Message:  DIGITAL HUB- Your order #${order.id.slice(0,8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Method: Cash On Delivery.`);
     console.log(`======================================================\n`);
 
     return res.json({ message: 'Order placed successfully', order });
@@ -2270,7 +2507,7 @@ app.put('/api/orders/:id', requireAdmin, async (req: Request, res: Response) => 
       if (shipping.phone) {
         console.log(`\n======================================================`);
         console.log(`[WHATSAPP SIMULATOR] To: ${shipping.phone}`);
-        console.log(`Message: Sri Pavan Computers - Update: Your order #${existingOrder.id.slice(0,8).toUpperCase()} status is now: ${status}!`);
+        console.log(`Message:  DIGITAL HUB- Update: Your order #${existingOrder.id.slice(0,8).toUpperCase()} status is now: ${status}!`);
         if (trackingNumber) console.log(`Tracking ID: ${trackingNumber}`);
         console.log(`======================================================\n`);
       }
@@ -2372,7 +2609,7 @@ app.post('/api/services/bookings', bookingLimiter, optionalAuthenticate, async (
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${mobileNumber}`);
-    console.log(`Message: Sri Pavan Computers - Service Booking Confirmed! We received your repair request for: ${deviceType}. Tracking ID: #${booking.id.slice(0,8).toUpperCase()}`);
+    console.log(`Message:  DIGITAL HUB- Service Booking Confirmed! We received your repair request for: ${deviceType}. Tracking ID: #${booking.id.slice(0,8).toUpperCase()}`);
     console.log(`======================================================\n`);
 
     return res.json({ message: 'Service booking request submitted successfully', booking });
@@ -2595,7 +2832,7 @@ app.post('/api/payments/create-order', authenticate, async (req: Request, res: R
     const razorpayOrder = await razorpay.orders.create(options);
 
     return res.json({
-      key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_sripavanelectronics',
+      key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_  DIGITAL HUBelectronics',
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
       razorpayOrderId: razorpayOrder.id
@@ -2617,7 +2854,7 @@ app.post('/api/payments/verify', authenticate, async (req: Request, res: Respons
     }
 
     // Verify cryptographic signature
-    const secret = process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_sripavanelectronics';
+    const secret = process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_  DIGITAL HUBelectronics';
     const hmac = crypto.createHmac('sha256', secret);
     hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
     const generated_signature = hmac.digest('hex');
@@ -2726,7 +2963,7 @@ app.post('/api/payments/verify', authenticate, async (req: Request, res: Respons
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${shippingAddress.phone}`);
-    console.log(`Message: Sri Pavan Computers - Payment Confirmed! Your order #${order.id.slice(0,8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Payment ID: ${razorpay_payment_id}.`);
+    console.log(`Message:  DIGITAL HUB- Payment Confirmed! Your order #${order.id.slice(0,8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Payment ID: ${razorpay_payment_id}.`);
     console.log(`======================================================\n`);
 
     return res.json({ message: 'Payment verified and order created successfully', order });
@@ -2779,7 +3016,7 @@ app.put('/api/admin/services/:id', requireAdmin, async (req: Request, res: Respo
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${booking.mobileNumber}`);
-    console.log(`Message: Sri Pavan Computers - Repair Update: Your booking #${booking.id.slice(0,8).toUpperCase()} is now: ${status}!`);
+    console.log(`Message:  DIGITAL HUB- Repair Update: Your booking #${booking.id.slice(0,8).toUpperCase()} is now: ${status}!`);
     console.log(`======================================================\n`);
 
     return res.json({ message: 'Booking status updated successfully', booking });
@@ -3116,6 +3353,8 @@ app.use('/api/admin', authenticate, expenseRouter);
 app.use('/api', optionalAuthenticate, warrantyRouter);
 app.use('/api/admin', authenticate, amcRouter);
 app.use('/api', optionalAuthenticate, pcBuilderRouter);
+app.use('/api', optionalAuthenticate, aiAssistantRouter);
+app.use('/api', optionalAuthenticate, ticketsRouter);
 
 // GET /api/admin/audit-logs - Fetch latest audit logs
 app.get('/api/admin/audit-logs', authenticate, requireAdmin, async (req: Request, res: Response) => {

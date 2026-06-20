@@ -1,21 +1,21 @@
 <div class="min-h-screen bg-transparent pt-24 pb-16">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
     
     <!-- Title header -->
     <div class="border-b border-slate-200 dark:border-slate-800/80 pb-4 mb-8">
       <h1 class="text-3xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-        Sri Pavan Electronics Catalog
+         DIGITAL HUBElectronics Catalog
       </h1>
       <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 uppercase font-semibold tracking-wider">
         Browse premium computer hardware & components in Kakinada
       </p>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    <div class="flex flex-col lg:flex-row gap-6">
       
       <!-- Sidebar Filters (Desktop) -->
-      <aside class="space-y-6 lg:col-span-1">
-        <div class="glass-panel p-6 rounded-[2rem] shadow-sm space-y-6">
+      <aside class="w-full lg:w-[240px] shrink-0 space-y-6 sticky top-24">
+        <div class="glass-panel p-4 sm:p-5 rounded-[2rem] shadow-sm space-y-6">
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
             <h2 class="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">{{ t().filters }}</h2>
             <button (click)="resetFilters()" class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-bold cursor-pointer">
@@ -86,7 +86,7 @@
       </aside>
 
       <!-- Products Listing Area -->
-      <main class="lg:col-span-3 space-y-6">
+      <main class="flex-grow min-w-0 space-y-6">
         
         <!-- Search & Sort bar -->
         <div class="glass-panel p-4 rounded-3xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200/60 dark:border-slate-800">
@@ -129,7 +129,7 @@
         <!-- Products List Grid -->
         <ng-container *ngIf="!loading()">
           <div *ngIf="products().length > 0; else emptyTpl" class="space-y-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
               <div *ngFor="let prod of products()">
                 <app-product-card [product]="prod"></app-product-card>
               </div>
@@ -177,5 +177,41 @@
       </main>
 
     </div>
+
+    <!-- Recently Viewed Section -->
+    <app-recently-viewed></app-recently-viewed>
+
+    <!-- Trust Badges Section -->
+    <app-trust-section></app-trust-section>
+  </div>
+</div>
+
+<!-- Floating Compare Drawer -->
+<div *ngIf="compareService.compareItems().length > 0" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 px-6 py-4 rounded-[2rem] shadow-2xl flex items-center gap-6 z-50 backdrop-blur-md animate-fade-in">
+  <div class="flex items-center gap-2">
+    <span class="text-xl">⚖️</span>
+    <div class="text-left">
+      <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">Compare Pool</h4>
+      <p class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold">{{ compareService.compareItems().length }} of 4 items selected</p>
+    </div>
+  </div>
+  
+  <!-- Mini Thumbnails of Compared Items -->
+  <div class="flex items-center gap-2 border-l border-slate-100 dark:border-slate-800/80 pl-4">
+    <div *ngFor="let item of compareService.compareItems()" class="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800/50 p-1 border border-slate-100 dark:border-slate-800 flex items-center justify-center relative group">
+      <img [src]="getImageUrl(item)" class="max-h-8 object-contain" />
+      <button (click)="compareService.removeFromCompare(item.id)" class="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] flex items-center justify-center rounded-full hover:bg-rose-600 transition-colors shadow-xs">
+        ✕
+      </button>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <a routerLink="/compare" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer">
+      Compare Now
+    </a>
+    <button (click)="compareService.clear()" class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-650 dark:bg-slate-800 dark:hover:bg-slate-750 dark:text-slate-300 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer">
+      Clear
+    </button>
   </div>
 </div>

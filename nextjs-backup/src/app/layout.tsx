@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sri Pavan Computers | Computers, Electronics & Repair Services",
-  description: "Shop premium laptops, assembled gaming & office desktops, storage SSDs, networking equipment, printers, keyboards, mice, and computer accessories at Sri Pavan Computers. Standard GST invoices, Cash on Delivery, and premium service support.",
-  keywords: ["Laptops", "Desktops", "Printers", "Monitors", "SSDs", "Keyboards", "Mice", "Sri Pavan Computers", "Kakinada Electronics", "Computer Repair"],
-  authors: [{ name: "Sri Pavan Computers" }],
+  title: " DIGITAL HUB| Computers, Electronics & Repair Services",
+  description: "Shop premium laptops, assembled gaming & office desktops, storage SSDs, networking equipment, printers, keyboards, mice, and computer accessories at  DIGITAL HUB. Standard GST invoices, Cash on Delivery, and premium service support.",
+  keywords: ["Laptops", "Desktops", "Printers", "Monitors", "SSDs", "Keyboards", "Mice", " DIGITAL HUB", "Kakinada Electronics", "Computer Repair"],
+  authors: [{ name: " DIGITAL HUB" }],
 };
 
 export default function RootLayout({

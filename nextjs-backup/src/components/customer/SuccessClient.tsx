@@ -82,7 +82,7 @@ export default function SuccessClient() {
           {t.orderSuccess}
         </h1>
         <p className="text-slate-600 dark:text-slate-400 text-sm max-w-md mx-auto">
-          Thank you for choosing Sri Pavan Computers. Your order <span className="font-mono font-bold text-slate-900 dark:text-slate-100">#{order.id.slice(0, 8).toUpperCase()}</span> is placed.
+          Thank you for choosing  DIGITAL HUB. Your order <span className="font-mono font-bold text-slate-900 dark:text-slate-100">#{order.id.slice(0, 8).toUpperCase()}</span> is placed.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
@@ -111,10 +111,10 @@ export default function SuccessClient() {
           <div className="space-y-1">
             <span className="text-xs font-black uppercase text-amber-600 tracking-wider">TAX INVOICE</span>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-slate-900">
-              Sri Pavan Computers
+               DIGITAL HUB
             </h2>
             <div className="text-xs text-slate-500 font-semibold space-y-0.5">
-              <p>D.No: 15-201, Trunk Road, Near Sri Pavan Complex</p>
+              <p>D.No: 15-201, Trunk Road, Near  DIGITAL HUBComplex</p>
               <p>Nellore, Andhra Pradesh, 524001, India</p>
               <p>GSTIN: 37SPCNE8291F1Z2 (Simulated)</p>
             </div>
@@ -140,7 +140,7 @@ export default function SuccessClient() {
 
           <div className="space-y-1">
             <h4 className="font-black text-slate-500 uppercase">Shipped From</h4>
-            <p className="font-black text-sm text-slate-800">Sri Pavan Computers Nellore</p>
+            <p className="font-black text-sm text-slate-800"> DIGITAL HUBNellore</p>
             <p className="text-slate-600">Trunk Road Depot</p>
             <p className="text-slate-600">Nellore, AP - 524001</p>
             <p className="text-slate-600 font-semibold">Phone: ++919848257578</p>
@@ -212,7 +212,7 @@ export default function SuccessClient() {
 
         {/* T&C / Footer Sign */}
         <div className="border-t border-slate-200 pt-6 text-[10px] text-slate-400 leading-relaxed text-center font-semibold">
-          <p>Thank you for purchasing from Sri Pavan Computers. This is a computer-generated GST tax invoice.</p>
+          <p>Thank you for purchasing from  DIGITAL HUB. This is a computer-generated GST tax invoice.</p>
           <p>Nellore Jurisdiction only. Subject to manufacturer warranty terms.</p>
         </div>
 

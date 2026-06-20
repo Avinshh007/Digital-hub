@@ -64,7 +64,7 @@ export default function AdminDashboardPage() {
             Sales Analytics Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time revenues, order tracking, and inventory status for Sri Pavan Computers
+            Real-time revenues, order tracking, and inventory status for  DIGITAL HUB
           </p>
         </div>
         <button

@@ -175,7 +175,7 @@ export class CheckoutComponent implements OnInit {
           key: rzpOrder.key_id,
           amount: rzpOrder.amount,
           currency: rzpOrder.currency,
-          name: 'Sri Pavan Computers',
+          name: ' DIGITAL HUB',
           description: 'Payment for Order Purchase',
           order_id: rzpOrder.razorpayOrderId,
           handler: async (response: any) => {

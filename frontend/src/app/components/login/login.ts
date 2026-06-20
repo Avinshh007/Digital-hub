@@ -20,7 +20,7 @@ import { LanguageService } from '../../services/language.service';
 
       <div class="w-full max-w-md glass-panel p-8 sm:p-10 rounded-[2.5rem] shadow-2xl relative group">
         <div class="text-center space-y-3 mb-8">
-          <h2 class="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Login to Sri Pavan</h2>
+          <h2 class="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase">Login to    DIGITAL HUB</h2>
           <p class="text-xs text-slate-400 dark:text-slate-500 font-semibold tracking-wider uppercase">Welcome back to premium tech shopping</p>
         </div>
 
@@ -38,7 +38,7 @@ import { LanguageService } from '../../services/language.service';
               name="email"
               required
               class="w-full bg-slate-50/50 border border-slate-200 dark:bg-slate-900/40 dark:border-slate-800 rounded-2xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 text-sm font-semibold text-slate-800 dark:text-slate-100 transition-all placeholder-slate-400"
-              placeholder="name@sripavan.com"
+              placeholder="name@  DIGITAL HUB.com"
             />
           </div>
 
@@ -141,7 +141,7 @@ export class LoginComponent {
     this.error.set(null);
     try {
       // Sign in with the seeded customer account for simulation
-      await this.authService.login('customer@sripavan.com', 'customer123', true);
+      await this.authService.login('customer@  DIGITAL HUB.com', 'customer123', true);
       this.router.navigate(['/']);
     } catch (err: any) {
       this.error.set('Google sign-in simulation failed.');

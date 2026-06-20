@@ -18,7 +18,7 @@ import path from 'path';
 async function runTests() {
   console.log('--- Starting Backend Integration Tests ---');
   
-  const testEmail = `test_admin_${Date.now()}@sripavan.com`;
+  const testEmail = `test_admin_${Date.now()}@  DIGITAL HUB.com`;
   const testPassword = 'SecurePassword123!';
   const passwordHash = hashPassword(testPassword);
 

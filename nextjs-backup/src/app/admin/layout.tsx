@@ -81,7 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-5 border-b border-blue-900 flex items-center justify-between">
           <Link href="/admin" className="flex flex-col min-w-max">
             <span className="font-extrabold text-sm tracking-tight text-white uppercase">SPC Admin Panel</span>
-            <span className="text-[10px] tracking-widest text-amber-400 font-bold uppercase -mt-0.5">Sri Pavan Computers</span>
+            <span className="text-[10px] tracking-widest text-amber-400 font-bold uppercase -mt-0.5"> DIGITAL HUB</span>
           </Link>
           <button onClick={() => setSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">
             <X size={20} />

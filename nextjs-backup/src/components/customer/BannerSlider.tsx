@@ -67,7 +67,7 @@ export default function BannerSlider({ banners }: BannerSliderProps) {
                   
                   {/* Floating tag */}
                   <span className="inline-block bg-amber-500 text-blue-950 text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
-                    Sri Pavan Computers
+                     DIGITAL HUB
                   </span>
 
                   {/* Title */}

@@ -15,7 +15,7 @@ export default function AboutPage() {
       <div className="text-center space-y-3">
         <span className="text-amber-500 font-extrabold text-xs uppercase tracking-widest">Our Story</span>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">
-          About Sri Pavan Computers
+          About  DIGITAL HUB
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base max-w-xl mx-auto">
           Serving Kakinada with premium computer systems, authentic accessories, and high-fidelity repair diagnostics since 2012.
@@ -29,7 +29,7 @@ export default function AboutPage() {
             Who We Are
           </h2>
           <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-            Sri Pavan Computers was established with a simple goal: to provide Kakinada's residents and businesses with reliable computer hardware and outstanding repair services. Over the years, we have built a reputation for transparency, quality, and technical expertise.
+             DIGITAL HUBwas established with a simple goal: to provide Kakinada's residents and businesses with reliable computer hardware and outstanding repair services. Over the years, we have built a reputation for transparency, quality, and technical expertise.
           </p>
           <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
             Whether you need a high-end custom assembled gaming PC, a thin-and-light laptop for your college studies, or bulk IT equipment for your corporate office, we offer curated, genuine components with standard manufacturer warranties and official GST-compliant tax invoices.

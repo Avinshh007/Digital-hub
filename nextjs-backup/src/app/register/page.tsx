@@ -75,7 +75,7 @@ function RegisterContent() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-2">
         <Link href="/" className="inline-block flex-col items-center">
           <span className="font-extrabold text-2xl text-blue-900 dark:text-blue-400 tracking-tight uppercase">
-            Sri Pavan Computers
+             DIGITAL HUB
           </span>
           <span className="block text-xs tracking-widest text-amber-500 font-bold uppercase -mt-0.5">
             Nellore Store

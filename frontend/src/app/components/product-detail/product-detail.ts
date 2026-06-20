@@ -8,11 +8,16 @@ import { ProductService, Product, Review } from '../../services/product.service'
 import { LanguageService } from '../../services/language.service';
 import { CartService } from '../../services/cart.service';
 import { AuthService } from '../../services/auth.service';
+import { RecentlyViewedService } from '../../services/recently-viewed.service';
+import { CompareService } from '../../services/compare.service';
+import { RecentlyViewedComponent } from '../recently-viewed/recently-viewed';
+import { TrustSectionComponent } from '../trust-section/trust-section';
+import { ProductCardComponent } from '../product-card/product-card';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, RecentlyViewedComponent, TrustSectionComponent, ProductCardComponent],
   templateUrl: './product-detail.html',
 })
 export class ProductDetailComponent implements OnInit {
@@ -25,11 +30,20 @@ export class ProductDetailComponent implements OnInit {
   private router = inject(Router);
   private title = inject(Title);
   private meta = inject(Meta);
+  private recentlyViewedService = inject(RecentlyViewedService);
+  private compareService = inject(CompareService);
 
   // Signals for state
   product = signal<Product | null>(null);
   recommendations = signal<Product[]>([]);
   loading = signal<boolean>(true);
+
+  // Smart Recommendations Signals
+  similarRecommendations = signal<Product[]>([]);
+  budgetRecommendations = signal<Product[]>([]);
+  betterRecommendations = signal<Product[]>([]);
+  performanceRecommendations = signal<Product[]>([]);
+  activeRecommendationTab = signal<'similar' | 'budget' | 'better' | 'performance'>('similar');
   
   // Gallery and options state
   selectedImageIndex = signal<number>(0);
@@ -79,7 +93,7 @@ export class ProductDetailComponent implements OnInit {
   get whatsappInquiryUrl(): string {
     const p = this.product();
     if (!p) return '#';
-    const text = `Hi Sri Pavan Computers, I am interested in purchasing: "${p.name}" (Price: ₹${p.price.toLocaleString('en-IN')}, SKU: ${p.sku}). Please let me know its availability.`;
+    const text = `Hi  DIGITAL HUB, I am interested in purchasing: "${p.name}" (Price: ₹${p.price.toLocaleString('en-IN')}, SKU: ${p.sku}). Please let me know its availability.`;
     return `https://wa.me/919848257578?text=${encodeURIComponent(text)}`;
   }
 
@@ -101,7 +115,7 @@ export class ProductDetailComponent implements OnInit {
       this.quantity.set(1);
 
       // SEO Metadata injection
-      this.title.setTitle(`${prod.name} | Sri Pavan Computers`);
+      this.title.setTitle(`${prod.name} |  DIGITAL HUB`);
       
       this.meta.removeTag("name='description'");
       this.meta.removeTag("property='og:title'");
@@ -110,7 +124,7 @@ export class ProductDetailComponent implements OnInit {
       this.meta.removeTag("property='og:type'");
       this.meta.removeTag("property='og:url'");
       
-      const prodDescription = prod.description || `Buy ${prod.name} online at Sri Pavan Computers. Get the best pricing, deals and GST invoice options.`;
+      const prodDescription = prod.description || `Buy ${prod.name} online at  DIGITAL HUB. Get the best pricing, deals and GST invoice options.`;
       const prodImage = this.imagesList()[0] || '/uploads/hero_banner.jpg';
       const prodUrl = typeof window !== 'undefined' ? window.location.href : `http://localhost:3000/products/${prod.id}`;
 
@@ -129,13 +143,21 @@ export class ProductDetailComponent implements OnInit {
       const catalog = await this.productService.getProducts({ category: prod.category?.slug });
       this.recommendations.set(catalog.products.filter(p => p.id !== id).slice(0, 4));
 
-      // Append to recently viewed list in LocalStorage
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('recently_viewed');
-        let ids: string[] = saved ? JSON.parse(saved) : [];
-        ids = [prod.id, ...ids.filter(val => val !== prod.id)].slice(0, 4);
-        localStorage.setItem('recently_viewed', JSON.stringify(ids));
+      // Load smart recommendations from backend API
+      try {
+        const recs = await this.productService.getProductRecommendations(id);
+        this.similarRecommendations.set(recs.similar || []);
+        this.budgetRecommendations.set(recs.budget || []);
+        this.betterRecommendations.set(recs.better || []);
+        this.performanceRecommendations.set(recs.performance || []);
+      } catch (recErr) {
+        console.error('Failed to load smart recommendations', recErr);
+        // Fallback: load simple related products
+        this.similarRecommendations.set(catalog.products.filter(p => p.id !== id).slice(0, 4));
       }
+
+      // Log to recently viewed service
+      this.recentlyViewedService.addProduct(prod);
     } catch (e) {
       console.error(e);
       this.product.set(null);
@@ -161,7 +183,7 @@ export class ProductDetailComponent implements OnInit {
       'mpn': prod.sku,
       'brand': {
         '@type': 'Brand',
-        'name': prod.brand?.name || 'Sri Pavan Computers'
+        'name': prod.brand?.name || ' DIGITAL HUB'
       },
       'offers': {
         '@type': 'Offer',
@@ -262,6 +284,18 @@ export class ProductDetailComponent implements OnInit {
       this.reviewError.set(err.error || 'Failed to submit review.');
     } finally {
       this.submittingReview.set(false);
+    }
+  }
+
+  isInCompare(): boolean {
+    const p = this.product();
+    return p ? this.compareService.isInCompare(p.id) : false;
+  }
+
+  toggleCompare() {
+    const p = this.product();
+    if (p) {
+      this.compareService.toggleProduct(p);
     }
   }
 }

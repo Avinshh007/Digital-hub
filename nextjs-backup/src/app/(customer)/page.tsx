@@ -57,7 +57,7 @@ export default async function Homepage() {
   const bannerList = banners.length > 0 ? banners : [
     {
       imageUrl: '/uploads/hero_banner.jpg',
-      title: 'Sri Pavan Computers',
+      title: ' DIGITAL HUB',
       subtitle: 'Premium Electronics & Computer Repair Store at Best Prices',
       linkUrl: '/products',
     }

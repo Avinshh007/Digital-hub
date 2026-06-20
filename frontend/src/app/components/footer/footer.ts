@@ -16,7 +16,7 @@ import { LanguageService } from '../../services/language.service';
           <!-- Column 1: Store Intro -->
           <div class="space-y-4">
             <h3 class="text-white font-extrabold text-lg tracking-wider uppercase">
-              Sri Pavan <span class="text-amber-400">Computers</span>
+               DIGITAL HUB<span class="text-amber-400">Computers</span>
             </h3>
             <p class="text-sm text-slate-400 leading-relaxed font-semibold">
               Serving Kakinada with premium computers, laptops, authorized accessories, and state-of-the-art repair services. Authorized GST billing.
@@ -62,7 +62,7 @@ import { LanguageService } from '../../services/language.service';
               <!-- Mail -->
               <div class="flex items-center space-x-2.5">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500 shrink-0"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                <a href="mailto:info@sripavancomputers.com" class="hover:text-amber-400 transition-colors">info@sripavancomputers.com</a>
+                <a href="mailto:info@  DIGITAL HUBcomputers.com" class="hover:text-amber-400 transition-colors">info@  DIGITAL HUBcomputers.com</a>
               </div>
 
             </div>
@@ -73,10 +73,10 @@ import { LanguageService } from '../../services/language.service';
         <!-- Divider and operating hours -->
         <div class="border-t border-slate-800 mt-12 pt-6 flex flex-col md:flex-row justify-between items-center text-xs font-semibold text-slate-500 uppercase tracking-widest gap-4">
           <div class="flex flex-col md:flex-row gap-2 md:gap-6 items-center">
-            <span>Operating: Mon - Sat (9:30 AM - 8:30 PM)</span>
+            <span>Operating: Mon - Sat (9:30 AM - 9:45 PM)</span>
             <span class="text-rose-500">Sunday Holiday (ఆదివారం సెలవు)</span>
           </div>
-          <span>&copy; {{ currentYear }} Sri Pavan Computers. {{ t().gstText }}.</span>
+          <span>&copy; {{ currentYear }}  DIGITAL HUB. {{ t().gstText }}.</span>
         </div>
 
       </div>

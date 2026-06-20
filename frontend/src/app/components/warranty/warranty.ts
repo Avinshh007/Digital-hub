@@ -80,7 +80,7 @@ export class WarrantyComponent {
     ctx.fillStyle = '#f59e0b';
     ctx.font = 'bold 36px Georgia, serif';
     ctx.textAlign = 'center';
-    ctx.fillText('SRI PAVAN COMPUTERS', 600, 120);
+    ctx.fillText(' DIGITAL HUB', 600, 120);
 
     ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 14px "Courier New", monospace';
@@ -140,7 +140,7 @@ export class WarrantyComponent {
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Authorized Signature', 300, 700);
-    ctx.fillText('Sri Pavan Computers ERP system verified log', 900, 700);
+    ctx.fillText(' DIGITAL HUBERP system verified log', 900, 700);
 
     // Draw lines for signature
     ctx.strokeStyle = '#475569';

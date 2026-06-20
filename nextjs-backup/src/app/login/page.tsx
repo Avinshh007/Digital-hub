@@ -69,7 +69,7 @@ function LoginContent() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-2">
         <Link href="/" className="inline-block flex-col items-center">
           <span className="font-extrabold text-2xl text-blue-900 dark:text-blue-400 tracking-tight uppercase">
-            Sri Pavan Computers
+             DIGITAL HUB
           </span>
           <span className="block text-xs tracking-widest text-amber-500 font-bold uppercase -mt-0.5">
             Nellore Store
@@ -93,7 +93,7 @@ function LoginContent() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@sripavan.com"
+                  placeholder="name@  DIGITAL HUB.com"
                   className="w-full bg-slate-50 border border-border-brand rounded-xl py-2.5 pl-10 pr-4 text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500 dark:bg-slate-900 dark:text-slate-100 font-semibold"
                 />
                 <Mail className="absolute left-3 top-3 text-slate-400" size={16} />
@@ -151,8 +151,8 @@ function LoginContent() {
               <ShieldCheck size={12} className="text-amber-500" />
               <span>TEST DEMO CREDENTIALS:</span>
             </div>
-            <p>• <span className="font-bold text-slate-700 dark:text-slate-300">Customer:</span> customer@sripavan.com / customer123</p>
-            <p>• <span className="font-bold text-slate-700 dark:text-slate-300">Admin:</span> admin@sripavan.com / admin123</p>
+            <p>• <span className="font-bold text-slate-700 dark:text-slate-300">Customer:</span> customer@  DIGITAL HUB.com / customer123</p>
+            <p>• <span className="font-bold text-slate-700 dark:text-slate-300">Admin:</span> admin@  DIGITAL HUB.com / admin123</p>
           </div>
 
           <div className="text-center text-xs">

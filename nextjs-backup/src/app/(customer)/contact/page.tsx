@@ -60,11 +60,11 @@ export default function ContactPage() {
               </div>
               <div className="flex items-center space-x-2.5">
                 <Mail size={16} className="text-amber-500 shrink-0" />
-                <a href="mailto:info@sripavancomputers.com" className="text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors">info@sripavancomputers.com</a>
+                <a href="mailto:info@  DIGITAL HUBcomputers.com" className="text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors">info@  DIGITAL HUBcomputers.com</a>
               </div>
               <div className="flex items-center space-x-2.5 border-t border-border-brand/40 pt-3 text-slate-500">
                 <Clock size={16} className="shrink-0" />
-                <span>Mon - Sat: 9:30 AM - 8:30 PM</span>
+                <span>Mon - Sat: 9:30 AM - 9:45 PM</span>
               </div>
             </div>
           </div>
@@ -159,7 +159,7 @@ export default function ContactPage() {
       {/* Map locator Section */}
       <section className="h-[400px] border border-border-brand rounded-3xl overflow-hidden shadow-sm">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3816.4690257463767!2d82.230967!3d16.9514643!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a3827ddaf59b4f7%3A0x5c23a08ed5ddcaa6!2sSri+Pavan+Computers!5e0!3m2!1sen!2sin!4v1717904000000!5m2!1sen!2sin"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3816.4690257463767!2d82.230967!3d16.9514643!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a3827ddaf59b4f7%3A0x5c23a08ed5ddcaa6!2s + DIGITAL HUB+Computers!5e0!3m2!1sen!2sin!4v1717904000000!5m2!1sen!2sin"
           width="100%"
           height="100%"
           style={{ border: 0 }}

@@ -113,7 +113,7 @@ export default function HomepageClient({
   const bannerData = initialBanners.length > 0 ? initialBanners : [
     {
       imageUrl: '/uploads/hero_banner.jpg',
-      title: 'Welcome to Sri Pavan Computers',
+      title: 'Welcome to  DIGITAL HUB',
       subtitle: 'Premium Electronics & Computer Repair Store in Kakinada',
       linkUrl: '/products',
     }
@@ -213,7 +213,7 @@ export default function HomepageClient({
             </p>
           </div>
           <a
-            href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919848257578'}?text=Hello%20Sri%20Pavan%20Computers,%20I%20want%20to%20order%20some%20computer%20items.`}
+            href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919848257578'}?text=Hello%20 %20 DIGITAL HUB%20Computers,%20I%20want%20to%20order%20some%20computer%20items.`}
             target="_blank"
             rel="noopener noreferrer"
             className="relative z-10 shrink-0 flex items-center space-x-3 bg-white text-emerald-600 font-black uppercase tracking-wider text-sm sm:text-base px-8 py-4 rounded-full hover:bg-emerald-50 hover:scale-105 active:scale-95 transition-all shadow-xl hover:shadow-white/20 cursor-pointer"
@@ -305,7 +305,7 @@ export default function HomepageClient({
           <div className="relative z-10 space-y-4">
             <span className="text-indigo-600 font-extrabold text-xs uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Store Details</span>
             <h3 className="text-3xl sm:text-4xl font-black uppercase text-slate-800 tracking-tight pt-3">
-              Sri Pavan Computers
+               DIGITAL HUB
             </h3>
             <p className="text-slate-500 text-sm sm:text-base font-semibold tracking-wide">
               Krishna Kanth Plaza, R R Road, near Sanjay Nagar PHC, Kakinada, Andhra Pradesh 533001
@@ -331,7 +331,7 @@ export default function HomepageClient({
               <div className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
                 <Mail size={18} className="shrink-0" />
               </div>
-              <a href="mailto:info@sripavancomputers.com" className="text-slate-600 font-medium hover:text-blue-600 transition-colors pt-1">info@sripavancomputers.com</a>
+              <a href="mailto:info@  DIGITAL HUBcomputers.com" className="text-slate-600 font-medium hover:text-blue-600 transition-colors pt-1">info@  DIGITAL HUBcomputers.com</a>
             </div>
           </div>
 
@@ -344,7 +344,7 @@ export default function HomepageClient({
         {/* Map Embed Card */}
         <div className="h-[380px] lg:h-auto min-h-[380px] border-[6px] border-white rounded-[2.5rem] overflow-hidden shadow-xl shadow-indigo-100/50 relative group hover:shadow-2xl hover:shadow-indigo-200/50 transition-all duration-500">
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3816.4690257463767!2d82.230967!3d16.9514643!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a3827ddaf59b4f7%3A0x5c23a08ed5ddcaa6!2sSri+Pavan+Computers!5e0!3m2!1sen!2sin!4v1717904000000!5m2!1sen!2sin"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3816.4690257463767!2d82.230967!3d16.9514643!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a3827ddaf59b4f7%3A0x5c23a08ed5ddcaa6!2s + DIGITAL HUB+Computers!5e0!3m2!1sen!2sin!4v1717904000000!5m2!1sen!2sin"
             width="100%"
             height="100%"
             style={{ border: 0 }}

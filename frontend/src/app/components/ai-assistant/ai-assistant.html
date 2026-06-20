@@ -1,0 +1,140 @@
+<!-- Floating Chat Trigger Button -->
+<button
+  (click)="toggleChat()"
+  class="fixed bottom-24 right-6 z-50 flex items-center justify-center bg-gradient-to-tr from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 group border border-indigo-400/20 backdrop-blur-md cursor-pointer animate-pulse-slow"
+  [title]="isOpen() ? 'Close Assistant' : 'Chat with AI Assistant'"
+>
+  <svg *ngIf="!isOpen()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover:rotate-12 transition-transform duration-300">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+  </svg>
+  <svg *ngIf="isOpen()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+</button>
+
+<!-- Chat Widget Drawer -->
+<div
+  *ngIf="isOpen()"
+  class="fixed bottom-40 right-6 z-50 w-[90vw] sm:w-[400px] h-[550px] bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-md animate-slide-up transition-all duration-300"
+>
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 py-4 flex items-center justify-between border-b border-indigo-950/20">
+    <div class="flex items-center space-x-3">
+      <div class="relative">
+        <div class="w-10 h-10 rounded-full bg-indigo-600/30 flex items-center justify-center text-white border border-indigo-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full"></span>
+      </div>
+      <div>
+        <h4 class="text-sm font-black text-white tracking-tight uppercase">Sales Assistant</h4>
+        <span class="text-xs text-slate-300 font-medium"> DIGITAL HUBAI • Online</span>
+      </div>
+    </div>
+    <button (click)="toggleChat()" class="text-slate-400 hover:text-white transition-colors cursor-pointer">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Messages Stream -->
+  <div #chatScrollContainer class="flex-grow overflow-y-auto p-6 space-y-4 scroll-smooth bg-slate-50/50 dark:bg-slate-950/20">
+    <div *ngFor="let msg of messages()" class="flex flex-col" [ngClass]="msg.role === 'user' ? 'items-end' : 'items-start'">
+      <div
+        [ngClass]="msg.role === 'user' 
+          ? 'bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white rounded-2xl rounded-tr-none px-4 py-2.5 max-w-[85%] shadow-md' 
+          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-800/80 rounded-2xl rounded-tl-none px-4 py-2.5 max-w-[85%] shadow-sm'"
+      >
+        <p class="text-sm leading-relaxed whitespace-pre-line">{{ msg.text }}</p>
+      </div>
+      
+      <!-- Recommended Products Cards inside stream -->
+      <div *ngIf="msg.products && msg.products.length > 0" class="w-full mt-3 space-y-2">
+        <div *ngFor="let prod of msg.products" 
+             class="flex items-center bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-3 shadow-sm hover:shadow-md transition-shadow">
+          <a [routerLink]="['/products', prod.id]" (click)="toggleChat()" class="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-900 shrink-0 flex items-center justify-center p-1 border border-slate-100 dark:border-slate-800">
+            <img [src]="getProductImage(prod)" class="w-full h-full object-contain" alt="product image" />
+          </a>
+          <div class="ml-3 flex-grow min-w-0">
+            <a [routerLink]="['/products', prod.id]" (click)="toggleChat()" 
+               class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate hover:text-indigo-600 block leading-tight">
+              {{ prod.name }}
+            </a>
+            <div class="flex items-center justify-between mt-1">
+              <span class="text-xs font-black text-indigo-600 dark:text-indigo-400">
+                ₹{{ prod.price.toLocaleString('en-IN') }}
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full" 
+                    [ngClass]="prod.stock > 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' : 'bg-red-50 text-red-500 dark:bg-red-950/30'">
+                {{ prod.stock > 0 ? 'In Stock' : 'Out of Stock' }}
+              </span>
+            </div>
+          </div>
+          
+          <button 
+            *ngIf="prod.stock > 0"
+            (click)="handleAddToCart($event, prod)"
+            class="ml-3 shrink-0 p-2 bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-white rounded-xl transition-all cursor-pointer"
+            title="Add to Cart"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <span class="text-[10px] text-slate-400 dark:text-slate-500 mt-1 px-1 font-medium">
+        {{ msg.timestamp | date:'shortTime' }}
+      </span>
+    </div>
+
+    <!-- Loading Spinner Bubble -->
+    <div *ngIf="loading()" class="flex items-center space-x-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800/80 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm w-16">
+      <div class="flex space-x-1 justify-center items-center">
+        <div class="h-2 w-2 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+        <div class="h-2 w-2 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+        <div class="h-2 w-2 bg-indigo-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Suggestion Chips -->
+  <div class="px-6 py-2 overflow-x-auto flex space-x-2 border-t border-slate-100 dark:border-slate-800/50 bg-white dark:bg-slate-900 shrink-0 scrollbar-none">
+    <button
+      *ngFor="let sug of suggestions"
+      (click)="handleSuggestionClick(sug)"
+      class="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700/80 px-3 py-1.5 rounded-full shrink-0 transition-colors border border-slate-200/40 dark:border-slate-800 cursor-pointer"
+    >
+      {{ sug }}
+    </button>
+  </div>
+
+  <!-- Message Input Form -->
+  <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0 flex items-center space-x-2">
+    <input
+      #msgInput
+      (keydown.enter)="sendMessage(msgInput.value); msgInput.value = ''"
+      type="text"
+      placeholder="Ask a question..."
+      class="flex-grow bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/50 text-slate-800 dark:text-slate-200 text-sm rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:focus:ring-indigo-500/30"
+    />
+    <button
+      (click)="sendMessage(msgInput.value); msgInput.value = ''"
+      class="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+</div>

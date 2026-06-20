@@ -55,7 +55,7 @@ export class HomepageComponent implements OnInit, OnDestroy {
   banners: Banner[] = [
     {
       imageUrl: '/uploads/hero_banner.jpg',
-      title: 'Sri Pavan Computers',
+      title: ' DIGITAL HUB',
       subtitle: 'Premium Electronics & Computer Repair Store in Kakinada',
       linkUrl: '/products',
     },

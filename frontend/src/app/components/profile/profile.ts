@@ -245,13 +245,7 @@ export class ProfileComponent implements OnInit {
     this.editProfileError.set(null);
 
     try {
-      const res = await this.authService.register(
-        this.profileName,
-        this.profileEmail,
-        '' // empty password triggers normal profile update on auth.service wrapper or we make a direct call
-      );
-      // Wait, let's call the auth profile update API directly to be safe
-      const directRes = await this.authService.updateProfileDirect(this.profileName, this.profileEmail);
+      const res = await this.authService.updateProfileDirect(this.profileName, this.profileEmail);
       this.editProfileSuccess.set('Profile details updated successfully!');
     } catch (err: any) {
       this.editProfileError.set(err.error || 'Failed to update profile details.');

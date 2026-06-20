@@ -142,7 +142,7 @@ export default function ProductDetailClient({ product, relatedProducts }: Produc
   const isProductInWishlist = isInWishlist(product.id);
 
   // Prepopulate WhatsApp text
-  const waText = `Hello Sri Pavan Computers,%20I%20am%20interested%20in%20buying:%20\n*${product.name}*\n*Price:* ₹${product.price.toLocaleString('en-IN')}\n*SKU:* ${product.sku}\n\nPlease%20confirm%20availability.`;
+  const waText = `Hello  DIGITAL HUB,%20I%20am%20interested%20in%20buying:%20\n*${product.name}*\n*Price:* ₹${product.price.toLocaleString('en-IN')}\n*SKU:* ${product.sku}\n\nPlease%20confirm%20availability.`;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
