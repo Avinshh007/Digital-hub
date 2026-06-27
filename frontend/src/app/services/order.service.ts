@@ -33,6 +33,7 @@ export interface Order {
   paymentId?: string;
   shippingAddress: string; // JSON string
   trackingNumber?: string;
+  courierName?: string;
   couponCode?: string;
   items?: OrderItem[];
   createdAt: string;
@@ -84,6 +85,7 @@ export class OrderService {
     status?: string;
     paymentStatus?: string;
     trackingNumber?: string | null;
+    courierName?: string | null;
   }): Promise<any> {
     return firstValueFrom(
       this.http.put(`${this.apiUrl}/orders/${id}`, updateData, { withCredentials: true })

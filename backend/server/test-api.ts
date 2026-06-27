@@ -14,16 +14,47 @@ import http from 'http';
 
 import { exec, ChildProcess } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 
 async function runTests() {
   console.log('--- Starting Backend Integration Tests ---');
+  console.log('[Test Client Startup] DATABASE_URL:', process.env.DATABASE_URL);
   
-  const testEmail = `test_admin_${Date.now()}@  DIGITAL HUB.com`;
+  const testEmail = `test_admin_${Date.now()}@digitalhub.com`;
   const testPassword = 'SecurePassword123!';
   const passwordHash = hashPassword(testPassword);
 
   // Pre-cleanup of any stray records from previous failed runs
   console.log('Cleaning up any stray records from previous runs...');
+  try {
+    const strayUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { startsWith: 'test_admin_' } },
+          { email: { startsWith: 'otp_signup_' } },
+          { email: { startsWith: 'rate_limit_' } }
+        ]
+      }
+    });
+    const strayUserIds = strayUsers.map(u => u.id);
+    await prisma.orderItem.deleteMany({
+      where: {
+        OR: [
+          { order: { userId: { in: strayUserIds } } },
+          { product: { sku: { in: ['TEST-SKU-A', 'TEST-SKU-B'] } } }
+        ]
+      }
+    });
+    await prisma.order.deleteMany({
+      where: { userId: { in: strayUserIds } }
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: strayUserIds } }
+    });
+  } catch (err: any) {
+    console.log('Pre-cleanup error (ignored):', err.message);
+  }
+
   await prisma.product.deleteMany({
     where: { sku: { in: ['TEST-SKU-A', 'TEST-SKU-B'] } }
   });
@@ -41,8 +72,13 @@ async function runTests() {
     }
   });
 
+  const allUsersInTestClient = await prisma.user.findMany();
+  console.log('[Test Client Debug] All users in DB:', allUsersInTestClient.map(u => u.email));
+
   let serverProcess: ChildProcess | null = null;
   const testPort = 3002;
+  let rateLimitEmail = '';
+  let signupEmail = '';
 
   try {
     // 2. Start the Express server on port 3002
@@ -257,6 +293,240 @@ async function runTests() {
     assert.ok(prodAAfter?.images.includes('images.unsplash.com'), 'Product A images should now contain an Unsplash URL');
     console.log(`Auto-assign successful! New image for Product A: ${prodAAfter?.images}`);
 
+    function getLatestOtpFromLog(emailAddress: string): string {
+      const logPath = path.resolve(process.cwd(), 'email_messages.log');
+      if (!fs.existsSync(logPath)) return '';
+      const fileContent = fs.readFileSync(logPath, 'utf8');
+      const blocks = fileContent.split('To: ' + emailAddress);
+      if (blocks.length < 2) return '';
+      const lastBlock = blocks[blocks.length - 1];
+      const match = lastBlock.match(/(?:code|otp)\b.*?(\d{6})/i) || lastBlock.match(/\b\d{6}\b/);
+      return match ? (match[1] || match[0]) : '';
+    }
+
+    // Guest headers containing CSRF token to pass protection checks on public POST endpoints
+    const guestHeaders = {
+      'Content-Type': 'application/json',
+      'Cookie': initialCookies,
+      'x-xsrf-token': initialXsrfToken
+    };
+
+    // 10. Test OTP Rate Limiting
+    console.log('Testing OTP rate limits...');
+    rateLimitEmail = `rate_limit_${Date.now()}@test.com`;
+    // 3 successful requests
+    for (let i = 0; i < 3; i++) {
+      const regRes = await fetch(`http://localhost:${testPort}/api/auth/register`, {
+        method: 'POST',
+        headers: guestHeaders,
+        body: JSON.stringify({ name: 'Rate Limit User', email: rateLimitEmail, password: 'Password123' })
+      });
+      assert.strictEqual(regRes.status, 200, `Request ${i+1} should succeed`);
+    }
+    // 4th request should trigger rate limit (429)
+    const limitRes = await fetch(`http://localhost:${testPort}/api/auth/register`, {
+      method: 'POST',
+      headers: guestHeaders,
+      body: JSON.stringify({ name: 'Rate Limit User', email: rateLimitEmail, password: 'Password123' })
+    });
+    assert.strictEqual(limitRes.status, 429, '4th request must be rate limited (429)');
+    console.log('OTP rate limit verification passed!');
+
+    // 11. Test Complete Signup Flow using OTP Email parsing
+    console.log('Testing OTP signup flow...');
+    signupEmail = `otp_signup_${Date.now()}@test.com`;
+    const regRes = await fetch(`http://localhost:${testPort}/api/auth/register`, {
+      method: 'POST',
+      headers: guestHeaders,
+      body: JSON.stringify({ name: 'OTP Signup User', email: signupEmail, password: 'Password123' })
+    });
+    assert.strictEqual(regRes.status, 200, 'Registration OTP request should succeed');
+
+    const latestOtp = getLatestOtpFromLog(signupEmail);
+    assert.ok(latestOtp, 'OTP code should be logged to email_messages.log');
+    console.log(`Extracted registration OTP code: ${latestOtp}`);
+
+    const verifyRes = await fetch(`http://localhost:${testPort}/api/auth/verify-email`, {
+      method: 'POST',
+      headers: guestHeaders,
+      body: JSON.stringify({ email: signupEmail, otp: latestOtp })
+    });
+    assert.strictEqual(verifyRes.status, 200, 'Email OTP verification should succeed');
+    const verifyData = await verifyRes.json() as any;
+    assert.ok(verifyData.user, 'Should return logged in user object');
+    console.log('OTP signup verification passed!');
+
+    // 12. Test Forgot Password and Reset Password Flow
+    console.log('Testing password recovery OTP flow...');
+    const forgotRes = await fetch(`http://localhost:${testPort}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: guestHeaders,
+      body: JSON.stringify({ email: signupEmail })
+    });
+    assert.strictEqual(forgotRes.status, 200, 'Forgot password request should succeed');
+
+    const resetOtp = getLatestOtpFromLog(signupEmail);
+    assert.ok(resetOtp, 'Reset OTP code should be logged to email_messages.log');
+    console.log(`Extracted reset OTP code: ${resetOtp}`);
+
+    const resetRes = await fetch(`http://localhost:${testPort}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: guestHeaders,
+      body: JSON.stringify({ email: signupEmail, otp: resetOtp, newPassword: 'NewPasswordSecure123' })
+    });
+    assert.strictEqual(resetRes.status, 200, 'Password reset verification should succeed');
+    console.log('Password reset verification passed!');
+
+    // 13. Test Login Customer to obtain Session Cookies
+    console.log('Logging in customer...');
+    const custLoginRes = await fetch(`http://localhost:${testPort}/api/auth/login`, {
+      method: 'POST',
+      headers: guestHeaders,
+      body: JSON.stringify({ email: signupEmail, password: 'NewPasswordSecure123' })
+    });
+    assert.strictEqual(custLoginRes.status, 200, 'Customer login should succeed');
+    
+    const customerCookiesMap = new Map<string, string>();
+    const parseIntoMap = (cookieStr: string, map: Map<string, string>) => {
+      if (!cookieStr) return;
+      cookieStr.split(';').forEach(c => {
+        const [k, v] = c.split('=');
+        if (k && v) map.set(k.trim(), v.trim());
+      });
+    };
+    parseIntoMap(initialCookies, customerCookiesMap);
+    const custLoginCookiesStr = custLoginRes.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
+    parseIntoMap(custLoginCookiesStr, customerCookiesMap);
+
+    const customerCookies = Array.from(customerCookiesMap.entries()).map(([k, v]) => `${k}=${v}`).join('; ');
+    const customerHeaders = {
+      'Content-Type': 'application/json',
+      'Cookie': customerCookies,
+      'x-xsrf-token': customerCookiesMap.get('XSRF-TOKEN') || ''
+    };
+
+    // 14. Test COD Order creation
+    const productA = await prisma.product.findUnique({ where: { sku: 'TEST-SKU-A' } });
+    assert.ok(productA, 'Product A should exist');
+
+    const codOrderPayload = {
+      items: [
+        {
+          productId: productA.id,
+          quantity: 1,
+          price: productA.price
+        }
+      ],
+      shippingAddress: {
+        fullName: 'John Doe',
+        street: '123 Main St',
+        city: 'Bangalore',
+        state: 'Karnataka',
+        pinCode: '560001',
+        phone: '9876543210'
+      },
+      paymentMethod: 'COD'
+    };
+
+    console.log('Placing COD order...');
+    const codRes = await fetch(`http://localhost:${testPort}/api/orders`, {
+      method: 'POST',
+      headers: customerHeaders,
+      body: JSON.stringify(codOrderPayload)
+    });
+    assert.strictEqual(codRes.status, 200, 'COD order creation should succeed');
+    const codOrderJson = await codRes.json() as any;
+    const codOrder = codOrderJson.order;
+    assert.ok(codOrder && codOrder.id, 'Should return order object with ID');
+    console.log(`COD Order placed successfully: ID=${codOrder.id}`);
+
+    // Verify COD order confirmation and admin alert emails
+    const emailLogPath = path.resolve(process.cwd(), 'email_messages.log');
+    const logContentAfterCod = fs.readFileSync(emailLogPath, 'utf8');
+    assert.ok(logContentAfterCod.includes(`To: ${signupEmail}`), 'Confirmation email should be logged to customer');
+    assert.ok(logContentAfterCod.includes(`Subject: Order Confirmation`), 'Order confirmation email subject should be logged');
+    assert.ok(logContentAfterCod.includes(`To: ${testEmail}`), 'Admin alert email should be logged to test admin');
+    console.log('COD order email alerts verified successfully.');
+
+    // 15. Test Online Payment verification flow
+    console.log('Testing online payment checkout flow...');
+    const razorpayOrderId = 'order_test_razorpay_12345';
+    const razorpayPaymentId = 'pay_test_razorpay_67890';
+    
+    const crypto = require('crypto');
+    const secret = process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_  DIGITAL HUBelectronics';
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(`${razorpayOrderId}|${razorpayPaymentId}`);
+    const signature = hmac.digest('hex');
+
+    const onlineOrderPayload = {
+      items: [
+        {
+          productId: productA.id,
+          quantity: 1,
+          price: productA.price
+        }
+      ],
+      shippingAddress: {
+        fullName: 'Jane Doe',
+        street: '456 Tech Park',
+        city: 'Bangalore',
+        state: 'Karnataka',
+        pinCode: '560002',
+        phone: '9876543211'
+      },
+      paymentMethod: 'ONLINE'
+    };
+
+    const verifyPaymentRes = await fetch(`http://localhost:${testPort}/api/payments/verify`, {
+      method: 'POST',
+      headers: customerHeaders,
+      body: JSON.stringify({
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
+        razorpay_signature: signature,
+        orderData: onlineOrderPayload
+      })
+    });
+    assert.strictEqual(verifyPaymentRes.status, 200, 'Online payment verification should succeed');
+    const onlineOrderJson = await verifyPaymentRes.json() as any;
+    const onlineOrder = onlineOrderJson.order;
+    assert.ok(onlineOrder && onlineOrder.id, 'Should return order object with ID');
+    assert.strictEqual(onlineOrder.paymentStatus, 'COMPLETED', 'Payment status should be COMPLETED');
+    console.log(`Online Order placed successfully: ID=${onlineOrder.id}`);
+
+    // Verify online order emails are logged
+    const logContentAfterOnline = fs.readFileSync(emailLogPath, 'utf8');
+    assert.ok(logContentAfterOnline.includes('Subject: Payment Successful'), 'Payment success subject should be logged');
+    assert.ok(logContentAfterOnline.includes(razorpayPaymentId), 'Razorpay payment ID should be in the log');
+    console.log('Online order payment emails verified successfully.');
+
+    // 16. Test Admin update order status with Courier Name
+    console.log('Testing admin order fulfillment update with Courier Name...');
+    const updateOrderRes = await fetch(`http://localhost:${testPort}/api/orders/${codOrder.id}`, {
+      method: 'PUT',
+      headers: requestHeaders,
+      body: JSON.stringify({
+        status: 'SHIPPED',
+        trackingNumber: 'TRACK123456789',
+        courierName: 'Delhivery'
+      })
+    });
+    assert.strictEqual(updateOrderRes.status, 200, 'Admin update order should succeed');
+    const updatedOrderDetails = await updateOrderRes.json() as any;
+    const updatedOrder = updatedOrderDetails.order;
+    assert.ok(updatedOrder, 'Response should contain order object');
+    assert.strictEqual(updatedOrder.status, 'SHIPPED', 'Order status should be updated to SHIPPED');
+    assert.strictEqual(updatedOrder.trackingNumber, 'TRACK123456789', 'Tracking number should be updated');
+    assert.strictEqual(updatedOrder.courierName, 'Delhivery', 'Courier Name should be updated');
+
+    // Verify order status update email is logged
+    const logContentAfterFulfillment = fs.readFileSync(emailLogPath, 'utf8');
+    assert.ok(logContentAfterFulfillment.includes('Subject: Order #'), 'Status update subject should be logged');
+    assert.ok(logContentAfterFulfillment.includes('Delhivery'), 'Courier Name Delhivery should be in the log');
+    assert.ok(logContentAfterFulfillment.includes('TRACK123456789'), 'Tracking number should be in the log');
+    console.log('Fulfillment courier name and status updates verification passed!');
+
     console.log('--- ALL BACKEND INTEGRATION TESTS PASSED SUCCESSFULLY! ---');
 
   } catch (err: any) {
@@ -265,14 +535,30 @@ async function runTests() {
   } finally {
     // Cleanup Database
     console.log('Cleaning up database test entries...');
+    try {
+      const testUsers = await prisma.user.findMany({
+        where: { email: { in: [testEmail, rateLimitEmail, signupEmail] } }
+      });
+      const testUserIds = testUsers.map(u => u.id);
+
+      await prisma.orderItem.deleteMany({
+        where: { order: { userId: { in: testUserIds } } }
+      });
+      await prisma.order.deleteMany({
+        where: { userId: { in: testUserIds } }
+      });
+    } catch (cleanupErr: any) {
+      console.error('Failed to cleanup orders:', cleanupErr.message);
+    }
+
     await prisma.product.deleteMany({
       where: { sku: { in: ['TEST-SKU-A', 'TEST-SKU-B'] } }
     });
     await prisma.importHistory.deleteMany({
       where: { filename: { in: ['test-tally.csv', 'test-tally-update.csv'] } }
     });
-    await prisma.user.delete({
-      where: { id: adminUser.id }
+    await prisma.user.deleteMany({
+      where: { email: { in: [testEmail, rateLimitEmail, signupEmail] } }
     });
     
     // Terminate server process

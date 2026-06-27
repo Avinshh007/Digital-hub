@@ -38,7 +38,7 @@ aiAssistantRouter.post('/ai-assistant/chat', async (req: Request, res: Response)
     }
 
     const norm = message.toLowerCase().trim();
-    
+
     // 1. GREETING CHECK
     if (norm === 'hi' || norm === 'hello' || norm === 'hey' || norm.includes('who are you')) {
       return res.json({
@@ -169,7 +169,7 @@ aiAssistantRouter.post('/ai-assistant/chat', async (req: Request, res: Response)
       filters.price = { lte: maxBudget };
     }
     if (brandName) {
-      filters.brand = { name: { contains: brandName, mode: 'insensitive' } };
+      filters.brand = { name: { contains: brandName, } };
     }
 
     // Check if user is asking specifically about stock/availability (Phase 4)

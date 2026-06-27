@@ -76,7 +76,9 @@ export class ProductDetailComponent implements OnInit {
     if (!p) return [];
     try {
       const parsed = JSON.parse(p.specs);
-      return Object.entries(parsed).map(([key, val]) => ({ key, val }));
+      return Object.entries(parsed)
+        .filter(([key]) => key !== 'highlights' && key !== 'tags')
+        .map(([key, val]) => ({ key, val: typeof val === 'object' ? JSON.stringify(val) : val }));
     } catch (e) {
       return [];
     }

@@ -57,6 +57,8 @@ export interface Product {
   lockPrice: boolean;
   lockStock: boolean;
   lockSeo: boolean;
+  barcode?: string;
+  lowStockThreshold?: number;
   createdAt: string;
 }
 
@@ -256,6 +258,59 @@ export class ProductService {
         better: Product[];
         performance: Product[];
       }>(`${this.apiUrl}/products/${id}/recommendations`, { withCredentials: true })
+    );
+  }
+
+  // POST /api/products/:id/generate-content – generate product enrichment via AI/fallback
+  async generateProductAiContent(id: string): Promise<{
+    content: {
+      description: string;
+      highlights: string[];
+      seoTitle: string;
+      seoDescription: string;
+      tags: string[];
+    };
+  }> {
+    return firstValueFrom(
+      this.http.post<{
+        content: {
+          description: string;
+          highlights: string[];
+          seoTitle: string;
+          seoDescription: string;
+          tags: string[];
+        };
+      }>(`${this.apiUrl}/products/${id}/generate-content`, {}, { withCredentials: true })
+    );
+  }
+
+  // POST /api/products/generate-content – generate AI content for unsaved products
+  async generateNewProductAiContent(data: {
+    name: string;
+    brandId: string;
+    categoryId: string;
+    price: number;
+    description?: string;
+    specs?: any;
+  }): Promise<{
+    content: {
+      description: string;
+      highlights: string[];
+      seoTitle: string;
+      seoDescription: string;
+      tags: string[];
+    };
+  }> {
+    return firstValueFrom(
+      this.http.post<{
+        content: {
+          description: string;
+          highlights: string[];
+          seoTitle: string;
+          seoDescription: string;
+          tags: string[];
+        };
+      }>(`${this.apiUrl}/products/generate-content`, data, { withCredentials: true })
     );
   }
 }

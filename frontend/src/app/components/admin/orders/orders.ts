@@ -23,6 +23,7 @@ export class AdminOrdersComponent implements OnInit {
   tempStatus: { [key: string]: string } = {};
   tempPaymentStatus: { [key: string]: string } = {};
   tempTracking: { [key: string]: string } = {};
+  tempCourier: { [key: string]: string } = {};
 
   // Detail panel expansion
   expandedOrderId = signal<string | null>(null);
@@ -42,6 +43,7 @@ export class AdminOrdersComponent implements OnInit {
         this.tempStatus[order.id] = order.status;
         this.tempPaymentStatus[order.id] = order.paymentStatus;
         this.tempTracking[order.id] = order.trackingNumber || '';
+        this.tempCourier[order.id] = order.courierName || '';
       }
     } catch (e) {
       console.error(e);
@@ -86,6 +88,7 @@ export class AdminOrdersComponent implements OnInit {
         status: this.tempStatus[id],
         paymentStatus: this.tempPaymentStatus[id],
         trackingNumber: this.tempTracking[id] || null,
+        courierName: this.tempCourier[id] || null,
       });
       alert('Order status log updated successfully!');
       this.fetchOrdersList();
@@ -97,9 +100,10 @@ export class AdminOrdersComponent implements OnInit {
     }
   }
 
-  handleInputChange(id: string, field: 'status' | 'pay' | 'track', value: string) {
+  handleInputChange(id: string, field: 'status' | 'pay' | 'track' | 'courier', value: string) {
     if (field === 'status') this.tempStatus[id] = value;
     if (field === 'pay') this.tempPaymentStatus[id] = value;
     if (field === 'track') this.tempTracking[id] = value;
+    if (field === 'courier') this.tempCourier[id] = value;
   }
 }

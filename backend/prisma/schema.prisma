@@ -289,6 +289,7 @@ model Order {
   paymentId       String?
   shippingAddress String      // JSON stringified address details
   trackingNumber  String?
+  courierName     String?
   couponCode      String?
   items           OrderItem[]
   warranties      Warranty[]

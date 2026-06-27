@@ -54,10 +54,10 @@ try {
   console.error('Test run failed with error:', error.message);
   process.exitCode = 1;
 } finally {
-  // Wait 2 seconds for server process to fully exit and release DLL file locks on Windows
+  // Wait 5 seconds for server process to fully exit and release DLL file locks on Windows
   console.log('Waiting for background processes to release database file locks...');
   try {
-    execSync('node -e "const start = Date.now(); while (Date.now() - start < 2000) {}"');
+    execSync('node -e "const start = Date.now(); while (Date.now() - start < 5000) {}"');
   } catch (e) {}
 
   // 5. Restore schema.prisma and regenerate client
@@ -69,10 +69,22 @@ try {
   }
 
   console.log('Regenerating Prisma Client for PostgreSQL...');
-  try {
-    execSync('npx prisma generate', { cwd: path.resolve(__dirname, '..'), stdio: 'inherit' });
-    console.log('Prisma Client restored successfully.');
-  } catch (genError) {
-    console.error('Failed to regenerate Prisma Client for PostgreSQL:', genError.message);
+  let generated = false;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      execSync('npx prisma generate', { cwd: path.resolve(__dirname, '..'), stdio: 'inherit' });
+      console.log('Prisma Client restored successfully.');
+      generated = true;
+      break;
+    } catch (genError) {
+      console.warn(`Attempt ${attempt}/3 failed to regenerate Prisma Client: ${genError.message}`);
+      if (attempt < 3) {
+        // Wait 2 more seconds before retrying
+        try { execSync('node -e "const s = Date.now(); while (Date.now() - s < 2000) {}"'); } catch (e) {}
+      }
+    }
+  }
+  if (!generated) {
+    console.error('Failed to regenerate Prisma Client for PostgreSQL after 3 attempts. Run "npx prisma generate" manually.');
   }
 }

@@ -23,6 +23,17 @@ import { aiAssistantRouter } from './ai-assistant';
 import { ticketsRouter } from './tickets';
 import { logAudit } from './audit';
 import { getAutoAssignedImage } from './images-pool';
+import {
+  sendRegistrationOtpEmail,
+  sendPasswordResetOtpEmail,
+  sendOrderConfirmationEmail,
+  sendPaymentSuccessEmail,
+  sendOrderStatusUpdateEmail,
+  sendAdminNewOrderEmail,
+  sendAdminNewUserEmail
+} from './email';
+
+console.log('[Server Startup] DATABASE_URL:', process.env.DATABASE_URL);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -34,9 +45,12 @@ const razorpay = new Razorpay({
 });
 
 // In-memory OTP storage for registration email verification
-const emailOtps = new Map<string, { otp: string; expiresAt: number; userData?: any }>();
+const emailOtps = new Map<string, { otp: string; expiresAt: number; userData?: any; requestCount: number; firstRequestedAt: number }>();
 
-// In-memory Password Reset Tokens
+// In-memory Password Reset OTPs
+const passwordResetOtps = new Map<string, { otp: string; expiresAt: number; requestCount: number; firstRequestedAt: number }>();
+
+// In-memory Password Reset Tokens (keeping for backward compatibility or simple usage if needed)
 const resetTokens = new Map<string, { email: string; expiresAt: number }>();
 
 // Security Headers
@@ -53,6 +67,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(path.resolve(process.cwd(), '../frontend/public/uploads')));
 
 // CSRF double-submit cookie middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -201,19 +216,33 @@ app.post('/api/auth/register', authLimiter, async (req: Request, res: Response) 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
 
-    // Save temporary registration details in-memory until OTP verified
-    emailOtps.set(emailClean, {
-      otp,
-      expiresAt,
-      userData: { name: name.trim(), email: emailClean, password }
-    });
+    const now = Date.now();
+    const stored = emailOtps.get(emailClean);
+    if (stored) {
+      if (now - stored.firstRequestedAt > 10 * 60 * 1000) {
+        stored.requestCount = 1;
+        stored.firstRequestedAt = now;
+      } else {
+        if (stored.requestCount >= 3) {
+          return res.status(429).json({ error: 'Maximum OTP requests reached. Please try again after 10 minutes.' });
+        }
+        stored.requestCount += 1;
+      }
+      stored.otp = otp;
+      stored.expiresAt = expiresAt;
+      stored.userData = { name: name.trim(), email: emailClean, password };
+    } else {
+      emailOtps.set(emailClean, {
+        otp,
+        expiresAt,
+        userData: { name: name.trim(), email: emailClean, password },
+        requestCount: 1,
+        firstRequestedAt: now
+      });
+    }
 
-    // SIMULATED EMAIL NOTIFICATION
-    console.log(`\n======================================================`);
-    console.log(`[EMAIL SIMULATOR] To: ${emailClean}`);
-    console.log(`Subject: Verify Your Account -  DIGITAL HUB`);
-    console.log(`Your verification code is: ${otp}`);
-    console.log(`======================================================\n`);
+    // Send Registration OTP Email
+    await sendRegistrationOtpEmail(emailClean, name.trim(), otp);
 
     return res.json({
       message: 'OTP verification code sent to your email',
@@ -276,6 +305,16 @@ app.post('/api/auth/verify-email', async (req: Request, res: Response) => {
       }
     });
 
+    // Notify admins of new user registration
+    try {
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+      for (const admin of admins) {
+        await sendAdminNewUserEmail(admin.email, user);
+      }
+    } catch (adminErr) {
+      console.error('Failed to notify admins of new user registration:', adminErr);
+    }
+
     return res.json({
       message: 'Account verified and registered successfully',
       user: { id: user.id, email: user.email, role: user.role, name: user.name }
@@ -298,6 +337,12 @@ app.post('/api/auth/login', authLimiter, async (req: Request, res: Response) => 
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
+
+    console.log('[Server Login Debug] Email:', email.toLowerCase().trim(), 'Found user:', user ? { id: user.id, email: user.email, role: user.role } : 'NOT_FOUND');
+    if (user) {
+      const passMatch = comparePassword(password, user.passwordHash);
+      console.log('[Server Login Debug] Password match:', passMatch);
+    }
 
     if (!user || !comparePassword(password, user.passwordHash)) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -379,24 +424,41 @@ app.post('/api/auth/forgot-password', authLimiter, async (req: Request, res: Res
 
     if (!user) {
       // For security, don't reveal user doesn't exist
-      return res.json({ message: 'If the email exists, a password reset link has been generated.' });
+      return res.json({ message: 'If the email exists, a password reset verification code has been sent.' });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    resetTokens.set(token, {
-      email: emailClean,
-      expiresAt: Date.now() + 60 * 60 * 1000 // 1 hour expiry
-    });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
 
-    // SIMULATED EMAIL
-    console.log(`\n======================================================`);
-    console.log(`[EMAIL SIMULATOR] To: ${emailClean}`);
-    console.log(`Subject: Password Reset Request -  DIGITAL HUB`);
-    console.log(`Reset link: http://localhost:4200/reset-password?token=${token}`);
-    console.log(`======================================================\n`);
+    const now = Date.now();
+    const stored = passwordResetOtps.get(emailClean);
+    if (stored) {
+      if (now - stored.firstRequestedAt > 10 * 60 * 1000) {
+        stored.requestCount = 1;
+        stored.firstRequestedAt = now;
+      } else {
+        if (stored.requestCount >= 3) {
+          return res.status(429).json({ error: 'Maximum OTP requests reached. Please try again after 10 minutes.' });
+        }
+        stored.requestCount += 1;
+      }
+      stored.otp = otp;
+      stored.expiresAt = expiresAt;
+    } else {
+      passwordResetOtps.set(emailClean, {
+        otp,
+        expiresAt,
+        requestCount: 1,
+        firstRequestedAt: now
+      });
+    }
+
+    // Send Password Reset OTP Email
+    await sendPasswordResetOtpEmail(emailClean, otp);
 
     return res.json({
-      message: 'Password reset instructions have been logged to the server console.'
+      message: 'If the email exists, a password reset verification code has been sent.',
+      email: emailClean
     });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -407,28 +469,29 @@ app.post('/api/auth/forgot-password', authLimiter, async (req: Request, res: Res
 // POST /api/auth/reset-password
 app.post('/api/auth/reset-password', authLimiter, async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body;
+    const { email, otp, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token and new password are required' });
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ error: 'Email, OTP, and new password are required' });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    const stored = resetTokens.get(token);
-    if (!stored || stored.expiresAt < Date.now()) {
-      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    const emailClean = email.toLowerCase().trim();
+    const stored = passwordResetOtps.get(emailClean);
+    if (!stored || stored.otp !== otp || stored.expiresAt < Date.now()) {
+      return res.status(400).json({ error: 'Invalid or expired OTP code' });
     }
 
     const passwordHash = hashPassword(newPassword);
     await prisma.user.update({
-      where: { email: stored.email },
+      where: { email: emailClean },
       data: { passwordHash }
     });
 
-    resetTokens.delete(token);
+    passwordResetOtps.delete(emailClean);
 
     return res.json({ message: 'Password reset successfully. You can now login.' });
   } catch (error) {
@@ -932,27 +995,27 @@ app.get('/api/products', async (req: Request, res: Response) => {
 
     if (query) {
       where.OR = [
-        { name: { contains: query, mode: 'insensitive' } },
-        { sku: { contains: query, mode: 'insensitive' } },
-        { brand: { name: { contains: query, mode: 'insensitive' } } },
-        { category: { name: { contains: query, mode: 'insensitive' } } },
-        { specs: { contains: query, mode: 'insensitive' } },
+        { name: { contains: query, } },
+        { sku: { contains: query, } },
+        { brand: { name: { contains: query, } } },
+        { category: { name: { contains: query, } } },
+        { specs: { contains: query, } },
       ];
     }
 
     if (specRamFilter) {
-      where.specs = { contains: specRamFilter, mode: 'insensitive' };
+      where.specs = { contains: specRamFilter, };
     }
 
     if (specStorageFilter) {
       if (where.specs) {
         const existingContains = where.specs.contains;
         where.AND = where.AND || [];
-        where.AND.push({ specs: { contains: existingContains, mode: 'insensitive' } });
-        where.AND.push({ specs: { contains: specStorageFilter, mode: 'insensitive' } });
+        where.AND.push({ specs: { contains: existingContains, } });
+        where.AND.push({ specs: { contains: specStorageFilter, } });
         delete where.specs;
       } else {
-        where.specs = { contains: specStorageFilter, mode: 'insensitive' };
+        where.specs = { contains: specStorageFilter, };
       }
     }
 
@@ -1183,20 +1246,20 @@ app.get('/api/products/:id/recommendations', async (req: Request, res: Response)
         id: { not: id },
         status: 'ACTIVE',
         OR: [
-          { name: { contains: '16GB', mode: 'insensitive' } },
-          { name: { contains: '32GB', mode: 'insensitive' } },
-          { name: { contains: 'i7', mode: 'insensitive' } },
-          { name: { contains: 'i9', mode: 'insensitive' } },
-          { name: { contains: 'Ryzen 7', mode: 'insensitive' } },
-          { name: { contains: 'Ryzen 9', mode: 'insensitive' } },
-          { name: { contains: 'RTX', mode: 'insensitive' } },
-          { specs: { contains: '16GB', mode: 'insensitive' } },
-          { specs: { contains: '32GB', mode: 'insensitive' } },
-          { specs: { contains: 'i7', mode: 'insensitive' } },
-          { specs: { contains: 'i9', mode: 'insensitive' } },
-          { specs: { contains: 'Ryzen 7', mode: 'insensitive' } },
-          { specs: { contains: 'Ryzen 9', mode: 'insensitive' } },
-          { specs: { contains: 'RTX', mode: 'insensitive' } }
+          { name: { contains: '16GB', } },
+          { name: { contains: '32GB', } },
+          { name: { contains: 'i7', } },
+          { name: { contains: 'i9', } },
+          { name: { contains: 'Ryzen 7', } },
+          { name: { contains: 'Ryzen 9', } },
+          { name: { contains: 'RTX', } },
+          { specs: { contains: '16GB', } },
+          { specs: { contains: '32GB', } },
+          { specs: { contains: 'i7', } },
+          { specs: { contains: 'i9', } },
+          { specs: { contains: 'Ryzen 7', } },
+          { specs: { contains: 'Ryzen 9', } },
+          { specs: { contains: 'RTX', } }
         ]
       },
       take: 4,
@@ -1212,6 +1275,294 @@ app.get('/api/products/:id/recommendations', async (req: Request, res: Response)
     });
   } catch (error) {
     console.error('Fetch product recommendations error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * Core product enrichment generator using Gemini API (or deterministic fallback)
+ * Exposes a clean, modular API so bulk/Excel imports can call this directly.
+ */
+export async function generateProductContentCore(params: {
+  productName: string;
+  brandName: string;
+  categoryName: string;
+  price: number;
+  existingDescription?: string;
+  specs?: string | object;
+}): Promise<{
+  description: string;
+  highlights: string[];
+  seoTitle: string;
+  seoDescription: string;
+  tags: string[];
+}> {
+  const { productName, brandName, categoryName, price, existingDescription, specs } = params;
+
+  let specsObj: Record<string, string> = {};
+  if (specs) {
+    if (typeof specs === 'string') {
+      try {
+        specsObj = JSON.parse(specs);
+      } catch (e) {
+        specsObj = {};
+      }
+    } else if (typeof specs === 'object') {
+      specsObj = specs as Record<string, string>;
+    }
+  }
+
+  const categoryLower = categoryName.toLowerCase();
+  let categorySpecificPrompt = '';
+
+  if (categoryLower.includes('laptop')) {
+    categorySpecificPrompt = `This is a Laptop. In the description, you MUST explicitly mention:
+- Processor (CPU)
+- RAM (Memory)
+- Storage (SSD/HDD)
+- Display (Screen size, resolution, panel type)
+- Battery life and capacity
+Ensure these features are discussed in detail based on the provided Specifications.`;
+  } else if (categoryLower.includes('printer')) {
+    categorySpecificPrompt = `This is a Printer. In the description, you MUST explicitly mention:
+- Print Technology (e.g. Ink Tank, Laser, Inkjet)
+- Connectivity (e.g. Wi-Fi, USB, Ethernet, Bluetooth)
+- Print Speed (e.g. pages per minute - PPM)
+- Usage Type (e.g. Home, Office, All-in-One, Single Function)
+Ensure these features are discussed in detail based on the provided Specifications.`;
+  } else if (categoryLower.includes('monitor')) {
+    categorySpecificPrompt = `This is a Monitor. In the description, you MUST explicitly mention:
+- Resolution (e.g. Full HD, 4K, QHD)
+- Refresh Rate (e.g. 60Hz, 144Hz, 240Hz)
+- Panel Type (e.g. IPS, VA, TN, OLED)
+Ensure these features are discussed in detail based on the provided Specifications.`;
+  } else if (categoryLower.includes('storage') || categoryLower.includes('ssd') || categoryLower.includes('hard drive') || categoryLower.includes('hdd') || categoryLower.includes('nvme')) {
+    categorySpecificPrompt = `This is a Storage device (SSD/HDD). In the description, you MUST explicitly mention:
+- Storage Capacity (e.g. 500GB, 1TB, 2TB)
+- Performance / Read & Write Speeds (e.g. up to 3500 MB/s or 7000 MB/s)
+- Form Factor / Interface (e.g. NVMe M.2, SATA III, USB-C portable)
+Ensure these features are discussed in detail based on the provided Specifications.`;
+  } else {
+    categorySpecificPrompt = `In the description, you MUST explicitly incorporate and highlight the key features from the provided Specifications.`;
+  }
+
+  // Format specifications for prompt
+  const specsStr = Object.entries(specsObj)
+    .map(([key, val]) => `- ${key}: ${val}`)
+    .join('\n');
+
+  const prompt = `You are an expert copywriter for an enterprise IT and electronics retailer named Digital Hub.
+Generate high-quality, product-specific product catalog content for the following product:
+- Name: ${productName}
+- Brand: ${brandName}
+- Category: ${categoryName}
+- Price: ₹${price}
+${existingDescription ? `- Existing Description: ${existingDescription}` : ''}
+
+Specifications:
+${specsStr || 'No specifications declared.'}
+
+Category-Specific Instructions:
+${categorySpecificPrompt}
+
+You must return a JSON object with the exact keys:
+1. "description": A professional, engaging, and detailed sales description (between 150 and 250 words) highlighting features, target audience, and value proposition. It MUST integrate the category-specific specs listed above naturally. At least 3 major specifications from the Specifications section must be mentioned in the description when available.
+2. "highlights": An array of exactly 5 bullet points summarizing key features or technical specifications (max 12 words per bullet).
+3. "seoTitle": An optimized SEO Title (max 60 characters).
+4. "seoDescription": A compelling SEO Meta Description (max 160 characters).
+5. "tags": An array of 6-8 relevant search keywords or tags (e.g. "laptop", "16gb ram", "intel i5").
+
+Your output must be a valid, parseable JSON object and nothing else. Do not wrap it in markdown codeblocks (like \`\`\`json).`;
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  let aiResult;
+
+  if (apiKey) {
+    try {
+      const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const response = await fetch(apiURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json'
+          }
+        })
+      });
+
+      if (response.ok) {
+        const responseData = await response.json() as any;
+        const text = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          aiResult = JSON.parse(text);
+        }
+      } else {
+        console.error(`Gemini API returned error: ${response.status} ${response.statusText}`);
+      }
+    } catch (err) {
+      console.error('Failed to generate content from Gemini, falling back to deterministic generation', err);
+    }
+  }
+
+  if (!aiResult) {
+    // Deterministic fallback generator
+    const cpu = specsObj.CPU || specsObj.Processor || specsObj.processor || '';
+    const ram = specsObj.RAM || specsObj.Memory || specsObj.ram || '';
+    const storage = specsObj.Storage || specsObj.Capacity || specsObj.storage || '';
+    const display = specsObj.Display || specsObj.Screen || specsObj.display || '';
+    const battery = specsObj.Battery || specsObj.battery || '';
+
+    const printTech = specsObj['Print Technology'] || specsObj['Technology'] || '';
+    const conn = specsObj.Connectivity || specsObj.connections || '';
+    const speed = specsObj['Print Speed'] || specsObj.Speed || '';
+    const usage = specsObj['Usage Type'] || specsObj.Usage || '';
+
+    const res = specsObj.Resolution || specsObj.resolution || '';
+    const refresh = specsObj['Refresh Rate'] || specsObj.refresh || '';
+    const panel = specsObj['Panel Type'] || specsObj.panel || '';
+
+    const readWrite = specsObj['Read/Write Speed'] || specsObj['Speed'] || specsObj.Performance || '';
+
+    let categoryDescription = '';
+    let categoryHighlights: string[] = [];
+
+    if (categoryLower.includes('laptop')) {
+      categoryDescription = `Equipped with a powerful ${cpu || 'high-performance processor'}, ${ram || 'ample RAM'}, and lightning-fast ${storage || 'high-capacity SSD storage'}, it is engineered to handle intensive tasks and daily multitasking seamlessly. The vibrant ${display || 'crisp display'} offers an immersive visual experience, while its optimized battery configuration${battery ? ` (${battery})` : ''} ensures you stay productive on the go.`;
+      categoryHighlights = [
+        `Processor: ${cpu || 'Intel Core / AMD Ryzen Processor'}.`,
+        `Memory: ${ram || 'High-speed multitasking RAM'}.`,
+        `Storage: ${storage || 'Fast NVMe SSD storage'}.`,
+        `Display: ${display || 'Premium display panel'}.`,
+        `Battery: ${battery || 'Long-lasting battery backup'}.`
+      ];
+    } else if (categoryLower.includes('printer')) {
+      categoryDescription = `Featuring advanced ${printTech || 'high-quality print technology'} and versatile ${conn || 'seamless connectivity options'}, this printer is built for both ${usage || 'home and professional office environments'}. With efficient print speeds of up to ${speed || 'optimized pages per minute'}, it handles volume jobs with sharp text and brilliant color rendering.`;
+      categoryHighlights = [
+        `Print Tech: ${printTech || 'Genuine high-yield ink/toner technology'}.`,
+        `Connectivity: ${conn || 'Wireless & USB interfaces'}.`,
+        `Print Speed: ${speed || 'Fast output speed'}.`,
+        `Usage Type: ${usage || 'Versatile document handling'}.`,
+        `Output Quality: Sharp resolution and print durability.`
+      ];
+    } else if (categoryLower.includes('monitor')) {
+      categoryDescription = `This monitor boasts a stunning ${res || 'high-definition resolution'} combined with a smooth ${refresh || 'fast refresh rate'} and color-accurate ${panel || 'premium panel technology'}. Ideal for immersive gaming sessions, professional design workflows, and everyday multitasking, it provides eye comfort and stellar contrast.`;
+      categoryHighlights = [
+        `Resolution: ${res || 'Vibrant high-definition resolution'}.`,
+        `Refresh Rate: ${refresh || 'Smooth refresh rate'}.`,
+        `Panel Type: ${panel || 'Wide-viewing angle panel'}.`,
+        `Eye Care: Blue light filter and flicker-free tech.`,
+        `Design: Slim bezel profile with adjustable stand.`
+      ];
+    } else if (categoryLower.includes('storage') || categoryLower.includes('ssd') || categoryLower.includes('hard drive') || categoryLower.includes('hdd') || categoryLower.includes('nvme')) {
+      categoryDescription = `Designed with a capacity of ${storage || 'generous storage space'} and engineered with read/write performance reaching ${readWrite || 'blazing speeds'}, this storage drive guarantees rapid boot times and instantaneous file access. Its reliable design and standard interface make it perfect for desktops, laptops, or external backups.`;
+      categoryHighlights = [
+        `Capacity: ${storage || 'High storage capacity'}.`,
+        `Performance: ${readWrite || 'Blazing fast transfer speeds'}.`,
+        `Interface: Optimized form factor and connectivity.`,
+        `Reliability: Built for sustained heavy read/write cycles.`,
+        `Support: Authorized brand warranty and protection.`
+      ];
+    } else {
+      const specItems = Object.entries(specsObj).slice(0, 3).map(([k, v]) => `${k} of ${v}`).join(', ');
+      categoryDescription = `Engineered for superior reliability and long-term durability, it integrates key features including ${specItems || 'advanced specifications'}. Delivering ultimate stability and premium output, it is the perfect solution for modern computing set-ups.`;
+      categoryHighlights = [
+        `Premium ${brandName} engineering.`,
+        `Optimized for ${categoryName} applications.`,
+        `Specifications: ${Object.keys(specsObj).slice(0, 2).join(', ') || 'High performance'}.`,
+        `Genuine manufacturer warranty assistance.`,
+        `GST tax invoice benefits available.`
+      ];
+    }
+
+    const descWords = [
+      `The premium ${brandName} ${productName} represents a significant leap forward in the ${categoryName} category.`,
+      categoryDescription,
+      `With a competitive pricing of ₹${price.toLocaleString('en-IN')}, it offers unmatched value, drawing on ${brandName}'s legacy of engineering excellence.`,
+      `Digital Hub stands fully behind this product, providing authorized local service support, GST billing benefits, and official brand warranty assistance to guarantee peace of mind.`
+    ];
+
+    const fallbackTags = [
+      categoryName.toLowerCase(),
+      brandName.toLowerCase(),
+      productName.toLowerCase().split(' ')[0],
+      `${brandName.toLowerCase()}-${categoryName.toLowerCase()}`,
+      'digital-hub-computers'
+    ];
+    if (cpu) fallbackTags.push(cpu.toLowerCase().replace(/\s+/g, '-'));
+    if (ram) fallbackTags.push(ram.toLowerCase().replace(/\s+/g, '-'));
+    if (storage) fallbackTags.push(storage.toLowerCase().replace(/\s+/g, '-'));
+
+    aiResult = {
+      description: descWords.join(' '),
+      highlights: categoryHighlights,
+      seoTitle: `Buy ${brandName} ${productName} Online - Digital Hub`,
+      seoDescription: `Get the premium ${brandName} ${productName} ${categoryName} from Digital Hub at best prices with genuine warranty and GST invoice options in Kakinada.`,
+      tags: fallbackTags.slice(0, 8)
+    };
+  }
+
+  return aiResult;
+}
+
+// POST /api/products/:id/generate-content (Admin only)
+app.post('/api/products/:id/generate-content', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        brand: true
+      }
+    });
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const aiResult = await generateProductContentCore({
+      productName: product.name,
+      brandName: product.brand?.name || 'SPC',
+      categoryName: product.category?.name || 'Computer Hardware',
+      price: product.price,
+      existingDescription: product.description || undefined,
+      specs: product.specs || '{}'
+    });
+
+    return res.json({ content: aiResult });
+  } catch (error) {
+    console.error('Generate product content error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/products/generate-content (Admin only) - AI generation for unsaved products
+app.post('/api/products/generate-content', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { name, brandId, categoryId, price, description, specs } = req.body;
+
+    if (!name || !categoryId || !brandId) {
+      return res.status(400).json({ error: 'Name, Category, and Brand are required for AI generation.' });
+    }
+
+    const category = await prisma.category.findUnique({ where: { id: categoryId } });
+    const brand = await prisma.brand.findUnique({ where: { id: brandId } });
+
+    const aiResult = await generateProductContentCore({
+      productName: name,
+      brandName: brand?.name || 'SPC',
+      categoryName: category?.name || 'Computer Hardware',
+      price: price || 0,
+      existingDescription: description || undefined,
+      specs: specs || '{}'
+    });
+
+    return res.json({ content: aiResult });
+  } catch (error) {
+    console.error('Generate product content core error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1313,7 +1664,7 @@ app.put('/api/products/:id', requireAdmin, async (req: Request, res: Response) =
             await deleteFromCloudinary(img);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const updatedProduct = await prisma.product.update({
@@ -1376,7 +1727,7 @@ app.delete('/api/products/:id', requireAdmin, async (req: Request, res: Response
             await deleteFromCloudinary(img);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     await prisma.product.delete({ where: { id } });
     return res.json({ message: 'Product deleted successfully' });
@@ -1474,7 +1825,7 @@ app.post('/api/products/import-images', requireAdmin, upload.single('file'), asy
       } else {
         const destFilename = `${skuMatch}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${ext}`;
         const destPath = path.join(uploadDir, destFilename);
-        
+
         fs.writeFileSync(destPath, entry.getData());
         webPath = `/uploads/${destFilename}`;
       }
@@ -1596,7 +1947,7 @@ app.post('/api/products/import', requireAdmin, async (req: Request, res: Respons
         const name = (p.name || p['Product Name'] || p['Name'] || '').trim();
         const catInput = p.categoryName || p['Category'] || p.category || '';
         const brandInput = p.brandName || p['Brand'] || p.brand || '';
-        
+
         let categoryId = p.categoryId;
         if (!categoryId && catInput) {
           categoryId = await getOrCreateCategory(String(catInput));
@@ -1609,10 +1960,10 @@ app.post('/api/products/import', requireAdmin, async (req: Request, res: Respons
 
         const subcategory = p.subcategory || p['Subcategory'] || null;
         const description = p.description || p['Description'] || '';
-        
+
         const inputPrice = parseFloat(p.price || p['Discount Price'] || p['DiscountPrice'] || p['Sell Price'] || 0);
         const inputOriginalPrice = parseFloat(p.originalPrice || p['Price'] || p['MRP'] || p['Original Price'] || p['OriginalPrice'] || 0);
-        
+
         let price = inputPrice;
         let originalPrice = inputOriginalPrice;
         if (price === 0 && originalPrice > 0) {
@@ -1630,7 +1981,7 @@ app.post('/api/products/import', requireAdmin, async (req: Request, res: Respons
         const gstRate = parseFloat(p.gstRate !== undefined ? p.gstRate : (p['GST Rate'] || p['GST'] || 18.0));
         const warranty = p.warranty || p['Warranty'] || null;
         const modelNumber = p.modelNumber || p['Model Number'] || p['ModelNumber'] || null;
-        
+
         let specs = {};
         const rawSpecs = p.specs || p['Product Specifications'] || p['Specifications'] || p['Specs'];
         if (rawSpecs) {
@@ -2036,9 +2387,9 @@ app.post('/api/products/import/auto-assign-images', requireAdmin, async (req: Re
       } catch (e) {
         mainImage = imagesStr;
       }
-      
+
       if (!mainImage) return true;
-      
+
       const lower = mainImage.toLowerCase();
       if (
         lower.includes('placeholder') ||
@@ -2093,7 +2444,7 @@ app.post('/api/products/import/auto-assign-images', requireAdmin, async (req: Re
       fs.mkdirSync(backupDir, { recursive: true });
     }
     const timestamp = Date.now();
-    
+
     // Save full product table backup
     const backupPath = path.join(backupDir, `products_backup_${timestamp}.json`);
     fs.writeFileSync(backupPath, JSON.stringify(products, null, 2), 'utf8');
@@ -2134,7 +2485,7 @@ app.post('/api/products/import/auto-assign-images', requireAdmin, async (req: Re
 
       const categorySlug = prod.category?.slug || 'other-electronics';
       const brandSlug = prod.brand?.slug || ' - DIGITAL HUB-custom';
-      
+
       const newImageUrl = getAutoAssignedImage(prod.name, brandSlug, categorySlug, prod.id, prod.sku);
 
       try {
@@ -2148,12 +2499,12 @@ app.post('/api/products/import/auto-assign-images', requireAdmin, async (req: Re
               images: JSON.stringify([newImageUrl])
             }
           });
-          
+
           if (loggedCount < 20) {
             console.log(`[Demo Image Assignment] [${loggedCount + 1}/20] Product ID: ${prod.id}, SKU: ${prod.sku}, Name: ${prod.name}\n  -> Original: ${originalUrl}\n  -> Replaced: ${newImageUrl}`);
             loggedCount++;
           }
-          
+
           assigned++;
         } else {
           manualReview++;
@@ -2326,7 +2677,7 @@ app.get('/api/orders/:id', authenticate, async (req: Request, res: Response) => 
 // GET /api/orders/:id/invoice (Stream Generated GST Invoice PDF)
 app.get('/api/orders/:id/invoice', authenticate, async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  
+
   // Verify ownership
   const order = await prisma.order.findUnique({ where: { id } });
   if (!order) {
@@ -2450,15 +2801,43 @@ app.post('/api/orders', authenticate, async (req: Request, res: Response) => {
       data: {
         userId: req.user!.id,
         title: 'Order Placed!',
-        message: `Your COD order #${order.id.slice(0,8).toUpperCase()} of Rs. ${order.totalAmount} has been placed.`,
+        message: `Your COD order #${order.id.slice(0, 8).toUpperCase()} of Rs. ${order.totalAmount} has been placed.`,
         type: 'ORDER'
       }
     });
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${shippingAddress.phone}`);
-    console.log(`Message:  DIGITAL HUB- Your order #${order.id.slice(0,8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Method: Cash On Delivery.`);
+    console.log(`Message:  DIGITAL HUB- Your order #${order.id.slice(0, 8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Method: Cash On Delivery.`);
     console.log(`======================================================\n`);
+
+    // Fetch full order with items and product details for email dispatch
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (fullOrder) {
+      await sendOrderConfirmationEmail(req.user!.email, req.user!.name, fullOrder);
+
+      // Notify administrators
+      try {
+        const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+        for (const admin of admins) {
+          await sendAdminNewOrderEmail(admin.email, fullOrder);
+        }
+      } catch (adminErr) {
+        console.error('Failed to notify admins of new COD order:', adminErr);
+      }
+    }
 
     return res.json({ message: 'Order placed successfully', order });
   } catch (error) {
@@ -2471,7 +2850,7 @@ app.post('/api/orders', authenticate, async (req: Request, res: Response) => {
 app.put('/api/orders/:id', requireAdmin, async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { status, paymentStatus, trackingNumber } = req.body;
+    const { status, paymentStatus, trackingNumber, courierName } = req.body;
 
     const existingOrder = await prisma.order.findUnique({
       where: { id },
@@ -2486,7 +2865,8 @@ app.put('/api/orders/:id', requireAdmin, async (req: Request, res: Response) => 
       data: {
         status: status !== undefined ? status : undefined,
         paymentStatus: paymentStatus !== undefined ? paymentStatus : undefined,
-        trackingNumber: trackingNumber !== undefined ? trackingNumber : undefined
+        trackingNumber: trackingNumber !== undefined ? trackingNumber : undefined,
+        courierName: courierName !== undefined ? courierName : undefined
       }
     });
 
@@ -2496,20 +2876,40 @@ app.put('/api/orders/:id', requireAdmin, async (req: Request, res: Response) => 
         data: {
           userId: existingOrder.userId,
           title: `Order Status: ${status}`,
-          message: `Your order #${existingOrder.id.slice(0,8).toUpperCase()} has been updated to: ${status}.`,
+          message: `Your order #${existingOrder.id.slice(0, 8).toUpperCase()} has been updated to: ${status}.`,
           type: 'ORDER'
         }
       });
 
       // WhatsApp Simulator notification
       let shipping: any = {};
-      try { shipping = JSON.parse(existingOrder.shippingAddress); } catch(e) {}
+      try { shipping = JSON.parse(existingOrder.shippingAddress); } catch (e) { }
       if (shipping.phone) {
         console.log(`\n======================================================`);
         console.log(`[WHATSAPP SIMULATOR] To: ${shipping.phone}`);
-        console.log(`Message:  DIGITAL HUB- Update: Your order #${existingOrder.id.slice(0,8).toUpperCase()} status is now: ${status}!`);
+        console.log(`Message:  DIGITAL HUB- Update: Your order #${existingOrder.id.slice(0, 8).toUpperCase()} status is now: ${status}!`);
         if (trackingNumber) console.log(`Tracking ID: ${trackingNumber}`);
         console.log(`======================================================\n`);
+      }
+    }
+
+    // Trigger delivery status update email to the customer
+    const statusChanged = status && status !== existingOrder.status;
+    const trackingChanged = trackingNumber !== undefined && trackingNumber !== existingOrder.trackingNumber;
+    const courierChanged = courierName !== undefined && courierName !== existingOrder.courierName;
+
+    if (statusChanged || trackingChanged || courierChanged) {
+      try {
+        await sendOrderStatusUpdateEmail(
+          existingOrder.user.email,
+          existingOrder.user.name,
+          existingOrder.id,
+          updatedOrder.status,
+          updatedOrder.trackingNumber,
+          updatedOrder.courierName
+        );
+      } catch (emailErr) {
+        console.error('Failed to send order status update email:', emailErr);
       }
     }
 
@@ -2609,7 +3009,7 @@ app.post('/api/services/bookings', bookingLimiter, optionalAuthenticate, async (
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${mobileNumber}`);
-    console.log(`Message:  DIGITAL HUB- Service Booking Confirmed! We received your repair request for: ${deviceType}. Tracking ID: #${booking.id.slice(0,8).toUpperCase()}`);
+    console.log(`Message:  DIGITAL HUB- Service Booking Confirmed! We received your repair request for: ${deviceType}. Tracking ID: #${booking.id.slice(0, 8).toUpperCase()}`);
     console.log(`======================================================\n`);
 
     return res.json({ message: 'Service booking request submitted successfully', booking });
@@ -2956,15 +3356,44 @@ app.post('/api/payments/verify', authenticate, async (req: Request, res: Respons
       data: {
         userId: req.user!.id,
         title: 'Payment Confirmed!',
-        message: `Your payment of Rs. ${order.totalAmount} for order #${order.id.slice(0,8).toUpperCase()} was successful.`,
+        message: `Your payment of Rs. ${order.totalAmount} for order #${order.id.slice(0, 8).toUpperCase()} was successful.`,
         type: 'ORDER'
       }
     });
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${shippingAddress.phone}`);
-    console.log(`Message:  DIGITAL HUB- Payment Confirmed! Your order #${order.id.slice(0,8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Payment ID: ${razorpay_payment_id}.`);
+    console.log(`Message:  DIGITAL HUB- Payment Confirmed! Your order #${order.id.slice(0, 8).toUpperCase()} for Rs. ${order.totalAmount} is confirmed! Payment ID: ${razorpay_payment_id}.`);
     console.log(`======================================================\n`);
+
+    // Fetch full order with items and product details for email dispatch
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: { name: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (fullOrder) {
+      await sendOrderConfirmationEmail(req.user!.email, req.user!.name, fullOrder);
+      await sendPaymentSuccessEmail(req.user!.email, req.user!.name, fullOrder, razorpay_payment_id);
+
+      // Notify administrators
+      try {
+        const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+        for (const admin of admins) {
+          await sendAdminNewOrderEmail(admin.email, fullOrder);
+        }
+      } catch (adminErr) {
+        console.error('Failed to notify admins of new order:', adminErr);
+      }
+    }
 
     return res.json({ message: 'Payment verified and order created successfully', order });
 
@@ -3016,7 +3445,7 @@ app.put('/api/admin/services/:id', requireAdmin, async (req: Request, res: Respo
 
     console.log(`\n======================================================`);
     console.log(`[WHATSAPP SIMULATOR] To: ${booking.mobileNumber}`);
-    console.log(`Message:  DIGITAL HUB- Repair Update: Your booking #${booking.id.slice(0,8).toUpperCase()} is now: ${status}!`);
+    console.log(`Message:  DIGITAL HUB- Repair Update: Your booking #${booking.id.slice(0, 8).toUpperCase()} is now: ${status}!`);
     console.log(`======================================================\n`);
 
     return res.json({ message: 'Booking status updated successfully', booking });
@@ -3228,9 +3657,9 @@ app.get('/sitemap.xml', async (req: Request, res: Response) => {
     const categories = await prisma.category.findMany({ select: { slug: true, updatedAt: true } });
 
     res.header('Content-Type', 'application/xml');
-    
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-    
+
     // Add static pages
     xml += `  <url>\n    <loc>http://localhost:4200/</loc>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
     xml += `  <url>\n    <loc>http://localhost:4200/products</loc>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
@@ -3305,10 +3734,10 @@ app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateString = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      
+
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
-      
+
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 

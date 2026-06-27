@@ -37,7 +37,7 @@ export class ShopComponent implements OnInit {
   selectedCategory = signal<string>('');
   selectedBrand = signal<string>('');
   minPrice = signal<number>(0);
-  maxPrice = signal<number>(200000);
+  maxPrice = signal<number>(1000000);
   inStockOnly = signal<boolean>(false);
   sortBy = signal<string>('createdAt');
 
@@ -156,7 +156,7 @@ export class ShopComponent implements OnInit {
     this.selectedCategory.set('');
     this.selectedBrand.set('');
     this.minPrice.set(0);
-    this.maxPrice.set(200000);
+    this.maxPrice.set(1000000);
     this.inStockOnly.set(false);
     this.sortBy.set('createdAt');
     this.currentPage.set(1);

@@ -32,6 +32,19 @@ export class AdminProductsComponent implements OnInit {
   showMobileFilters = signal<boolean>(false);
   adminView = signal<'grid' | 'table'>('grid');
 
+  // AI Product Enrichment Signals
+  showAiModal = signal<boolean>(false);
+  generatingAiContent = signal<boolean>(false);
+  selectedProductForAi = signal<Product | null>(null);
+  aiGeneratedContent = signal<{
+    description: string;
+    highlights: string[];
+    seoTitle: string;
+    seoDescription: string;
+    tags: string[];
+  } | null>(null);
+  aiOverwriteFields = false;
+
   // Summary Dashboard Stats
   stats = signal<{
     totalProducts: number;
@@ -129,6 +142,40 @@ export class AdminProductsComponent implements OnInit {
 
   // Custom spec key-value list (Dynamic builder)
   specsList: { key: string; value: string }[] = [];
+  duplicateSourceSpecs: { highlights?: string[]; tags?: string[] } = {};
+
+  // Collapsible Section States
+  sectionBasicExpanded = signal<boolean>(true);
+  sectionPriceExpanded = signal<boolean>(true);
+  sectionImagesExpanded = signal<boolean>(true);
+  sectionSpecsExpanded = signal<boolean>(true);
+  sectionAiExpanded = signal<boolean>(true);
+
+  // New Product AI State
+  generatingNewProductAi = signal<boolean>(false);
+  aiNewProductOverwrite = false;
+
+  // Completeness score
+  completenessScore = computed(() => {
+    let score = 0;
+    if (this.uploadedImages().length > 0) {
+      score += 25;
+    }
+    const hasSpecs = this.specsList.some(s => s.key && s.key.trim() && s.value && s.value.trim());
+    if (hasSpecs) {
+      score += 25;
+    }
+    const hasDesc = this.description && this.description.trim().length > 0;
+    const hasHighlights = this.duplicateSourceSpecs.highlights && this.duplicateSourceSpecs.highlights.length > 0;
+    if (hasDesc && hasHighlights) {
+      score += 25;
+    }
+    const hasSeo = this.seoTitle && this.seoTitle.trim() && this.seoDescription && this.seoDescription.trim();
+    if (hasSeo) {
+      score += 25;
+    }
+    return score;
+  });
 
   // Manual Image Management
   uploadedImages = signal<string[]>([]);
@@ -293,14 +340,59 @@ export class AdminProductsComponent implements OnInit {
     this.lockStock = prod.lockStock;
     this.lockSeo = prod.lockSeo;
 
+    this.duplicateSourceSpecs = {};
     try {
       const parsedSpecs = JSON.parse(prod.specs);
-      this.specsList = Object.keys(parsedSpecs).map(k => ({
-        key: k,
-        value: parsedSpecs[k]
-      }));
+      if (parsedSpecs.highlights) this.duplicateSourceSpecs.highlights = parsedSpecs.highlights;
+      if (parsedSpecs.tags) this.duplicateSourceSpecs.tags = parsedSpecs.tags;
+      
+      this.specsList = Object.keys(parsedSpecs)
+        .filter(k => k !== 'highlights' && k !== 'tags')
+        .map(k => ({
+          key: k,
+          value: parsedSpecs[k]
+        }));
     } catch (e) {
       this.specsList = [];
+    }
+
+    // Seed empty specs with category template
+    if (this.specsList.length === 0) {
+      const cat = this.categories().find(c => c.id === prod.categoryId);
+      if (cat) {
+        const slug = cat.slug.toLowerCase();
+        if (slug === 'laptops') {
+          this.specsList = [
+            { key: 'CPU', value: '' },
+            { key: 'RAM', value: '' },
+            { key: 'Storage', value: '' },
+            { key: 'GPU', value: '' },
+            { key: 'Display', value: '' },
+            { key: 'Operating System', value: '' }
+          ];
+        } else if (slug === 'printers') {
+          this.specsList = [
+            { key: 'Print Type', value: '' },
+            { key: 'Connectivity', value: '' },
+            { key: 'Print Speed', value: '' },
+            { key: 'Paper Size', value: '' }
+          ];
+        } else if (slug === 'monitors') {
+          this.specsList = [
+            { key: 'Resolution', value: '' },
+            { key: 'Refresh Rate', value: '' },
+            { key: 'Panel Type', value: '' },
+            { key: 'Ports', value: '' }
+          ];
+        } else if (slug === 'storage') {
+          this.specsList = [
+            { key: 'Capacity', value: '' },
+            { key: 'Interface', value: '' },
+            { key: 'Read Speed', value: '' },
+            { key: 'Write Speed', value: '' }
+          ];
+        }
+      }
     }
 
     try {
@@ -322,6 +414,119 @@ export class AdminProductsComponent implements OnInit {
   closeDetailModal() {
     this.showDetailModal.set(false);
     this.selectedProductDetails.set(null);
+  }
+
+  // AI Product Enrichment Handlers
+  openAiGeneration(prod: Product) {
+    this.selectedProductForAi.set(prod);
+    this.aiGeneratedContent.set(null);
+    this.aiOverwriteFields = false;
+    this.showAiModal.set(true);
+    this.triggerAiGeneration();
+  }
+
+  closeAiModal() {
+    this.showAiModal.set(false);
+    this.selectedProductForAi.set(null);
+    this.aiGeneratedContent.set(null);
+    this.generatingAiContent.set(false);
+  }
+
+  async triggerAiGeneration() {
+    const prod = this.selectedProductForAi();
+    if (!prod) return;
+
+    this.generatingAiContent.set(true);
+    try {
+      const res = await this.productService.generateProductAiContent(prod.id);
+      this.aiGeneratedContent.set(res.content);
+    } catch (e: any) {
+      alert(e.error || 'Failed to generate AI content.');
+      this.closeAiModal();
+    } finally {
+      this.generatingAiContent.set(false);
+    }
+  }
+
+  async approveAndSaveAiContent() {
+    const prod = this.selectedProductForAi();
+    const content = this.aiGeneratedContent();
+    if (!prod || !content) return;
+
+    // Parse current specs
+    let specsObj: any = {};
+    if (prod.specs) {
+      try {
+        specsObj = JSON.parse(prod.specs);
+      } catch (e) {
+        specsObj = {};
+      }
+    }
+
+    const overwrite = this.aiOverwriteFields;
+    const updatedPayload: any = {};
+
+    if (overwrite || !prod.description) {
+      updatedPayload.description = content.description;
+    }
+
+    if (overwrite || !prod.seoTitle) {
+      updatedPayload.seoTitle = content.seoTitle;
+    }
+
+    if (overwrite || !prod.seoDescription) {
+      updatedPayload.seoDescription = content.seoDescription;
+    }
+
+    // Update specs with highlights & tags
+    if (overwrite || !specsObj.highlights || (Array.isArray(specsObj.highlights) && specsObj.highlights.length === 0)) {
+      specsObj.highlights = content.highlights;
+    }
+
+    if (overwrite || !specsObj.tags || (Array.isArray(specsObj.tags) && specsObj.tags.length === 0)) {
+      specsObj.tags = content.tags;
+    }
+
+    updatedPayload.specs = specsObj;
+
+    // Preserve other unchanged fields to prevent stripping them
+    updatedPayload.name = prod.name;
+    updatedPayload.price = prod.price;
+    updatedPayload.originalPrice = prod.originalPrice;
+    updatedPayload.stock = prod.stock;
+    updatedPayload.sku = prod.sku;
+    updatedPayload.categoryId = prod.categoryId;
+    updatedPayload.brandId = prod.brandId;
+    updatedPayload.gstRate = prod.gstRate;
+    updatedPayload.subcategory = prod.subcategory;
+    updatedPayload.warranty = prod.warranty;
+    updatedPayload.modelNumber = prod.modelNumber;
+    updatedPayload.source = prod.source;
+    updatedPayload.status = prod.status;
+    updatedPayload.barcode = prod.barcode;
+    updatedPayload.lowStockThreshold = prod.lowStockThreshold;
+    updatedPayload.lockDescription = prod.lockDescription;
+    updatedPayload.lockImages = prod.lockImages;
+    updatedPayload.lockSpecs = prod.lockSpecs;
+    updatedPayload.lockPrice = prod.lockPrice;
+    updatedPayload.lockStock = prod.lockStock;
+    updatedPayload.lockSeo = prod.lockSeo;
+    
+    // Parse and pass existing images
+    try {
+      updatedPayload.images = JSON.parse(prod.images);
+    } catch (e) {
+      updatedPayload.images = ['/uploads/hero_banner.jpg'];
+    }
+
+    try {
+      await this.productService.updateProduct(prod.id, updatedPayload);
+      alert('AI-enriched product details saved successfully!');
+      this.closeAiModal();
+      this.loadAdminInventory();
+    } catch (err: any) {
+      alert(err.error || 'Failed to save product details.');
+    }
   }
 
   // CSV/Excel Exporter
@@ -419,15 +624,57 @@ export class AdminProductsComponent implements OnInit {
     this.lockStock = prod.lockStock;
     this.lockSeo = prod.lockSeo;
 
+    this.duplicateSourceSpecs = {};
     // Parse specs JSON to list
     try {
       const parsedSpecs = JSON.parse(prod.specs);
-      this.specsList = Object.keys(parsedSpecs).map(k => ({
-        key: k,
-        value: parsedSpecs[k]
-      }));
+      this.specsList = Object.keys(parsedSpecs)
+        .filter(k => k !== 'highlights' && k !== 'tags')
+        .map(k => ({
+          key: k,
+          value: parsedSpecs[k]
+        }));
     } catch (e) {
       this.specsList = [];
+    }
+
+    // Seed empty specs with category template
+    if (this.specsList.length === 0) {
+      const cat = this.categories().find(c => c.id === prod.categoryId);
+      if (cat) {
+        const slug = cat.slug.toLowerCase();
+        if (slug === 'laptops') {
+          this.specsList = [
+            { key: 'CPU', value: '' },
+            { key: 'RAM', value: '' },
+            { key: 'Storage', value: '' },
+            { key: 'GPU', value: '' },
+            { key: 'Display', value: '' },
+            { key: 'Operating System', value: '' }
+          ];
+        } else if (slug === 'printers') {
+          this.specsList = [
+            { key: 'Print Type', value: '' },
+            { key: 'Connectivity', value: '' },
+            { key: 'Print Speed', value: '' },
+            { key: 'Paper Size', value: '' }
+          ];
+        } else if (slug === 'monitors') {
+          this.specsList = [
+            { key: 'Resolution', value: '' },
+            { key: 'Refresh Rate', value: '' },
+            { key: 'Panel Type', value: '' },
+            { key: 'Ports', value: '' }
+          ];
+        } else if (slug === 'storage') {
+          this.specsList = [
+            { key: 'Capacity', value: '' },
+            { key: 'Interface', value: '' },
+            { key: 'Read Speed', value: '' },
+            { key: 'Write Speed', value: '' }
+          ];
+        }
+      }
     }
 
     // Parse images JSON list
@@ -471,7 +718,52 @@ export class AdminProductsComponent implements OnInit {
     this.lockSeo = false;
 
     this.specsList = [];
+    this.duplicateSourceSpecs = {};
     this.uploadedImages.set([]);
+  }
+
+  onCategoryChange(catId: string) {
+    this.categoryId = catId;
+    const cat = this.categories().find(c => c.id === catId);
+    if (!cat) return;
+
+    const slug = cat.slug.toLowerCase();
+    
+    // Only auto-initialize template keys if we are NOT editing, or if editing but the specs list is empty.
+    if (this.specsList.length === 0 || this.specsList.every(s => !s.key.trim())) {
+      this.specsList = [];
+      if (slug === 'laptops') {
+        this.specsList = [
+          { key: 'CPU', value: '' },
+          { key: 'RAM', value: '' },
+          { key: 'Storage', value: '' },
+          { key: 'GPU', value: '' },
+          { key: 'Display', value: '' },
+          { key: 'Operating System', value: '' }
+        ];
+      } else if (slug === 'printers') {
+        this.specsList = [
+          { key: 'Print Type', value: '' },
+          { key: 'Connectivity', value: '' },
+          { key: 'Print Speed', value: '' },
+          { key: 'Paper Size', value: '' }
+        ];
+      } else if (slug === 'monitors') {
+        this.specsList = [
+          { key: 'Resolution', value: '' },
+          { key: 'Refresh Rate', value: '' },
+          { key: 'Panel Type', value: '' },
+          { key: 'Ports', value: '' }
+        ];
+      } else if (slug === 'storage') {
+        this.specsList = [
+          { key: 'Capacity', value: '' },
+          { key: 'Interface', value: '' },
+          { key: 'Read Speed', value: '' },
+          { key: 'Write Speed', value: '' }
+        ];
+      }
+    }
   }
 
   // Specifications builder
@@ -625,6 +917,70 @@ export class AdminProductsComponent implements OnInit {
     }
   }
 
+  toggleSection(section: string) {
+    if (section === 'basic') this.sectionBasicExpanded.update(v => !v);
+    if (section === 'price') this.sectionPriceExpanded.update(v => !v);
+    if (section === 'images') this.sectionImagesExpanded.update(v => !v);
+    if (section === 'specs') this.sectionSpecsExpanded.update(v => !v);
+    if (section === 'ai') this.sectionAiExpanded.update(v => !v);
+  }
+
+  async triggerNewProductAiGeneration() {
+    if (!this.name || !this.categoryId || !this.brandId) {
+      alert('Please fill out Product Title, Category, and Brand in Basic Information first.');
+      return;
+    }
+
+    this.generatingNewProductAi.set(true);
+
+    const specsObj: any = {
+      highlights: this.duplicateSourceSpecs.highlights || [],
+      tags: this.duplicateSourceSpecs.tags || []
+    };
+    this.specsList.forEach(s => {
+      const trimmedKey = s.key.trim();
+      if (trimmedKey && trimmedKey !== 'highlights' && trimmedKey !== 'tags') {
+        specsObj[trimmedKey] = s.value.trim();
+      }
+    });
+
+    try {
+      const res = await this.productService.generateNewProductAiContent({
+        name: this.name,
+        brandId: this.brandId,
+        categoryId: this.categoryId,
+        price: this.price || 0,
+        description: this.description || undefined,
+        specs: specsObj
+      });
+
+      const content = res.content;
+      if (content) {
+        if (this.aiNewProductOverwrite || !this.description || !this.description.trim()) {
+          this.description = content.description;
+        }
+        if (this.aiNewProductOverwrite || !this.seoTitle || !this.seoTitle.trim()) {
+          this.seoTitle = content.seoTitle;
+        }
+        if (this.aiNewProductOverwrite || !this.seoDescription || !this.seoDescription.trim()) {
+          this.seoDescription = content.seoDescription;
+        }
+        if (this.aiNewProductOverwrite || !this.duplicateSourceSpecs.highlights || this.duplicateSourceSpecs.highlights.length === 0) {
+          this.duplicateSourceSpecs.highlights = content.highlights;
+        }
+        if (this.aiNewProductOverwrite || !this.duplicateSourceSpecs.tags || this.duplicateSourceSpecs.tags.length === 0) {
+          this.duplicateSourceSpecs.tags = content.tags;
+        }
+        alert('AI Content successfully generated and applied to the form!');
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(e.error || 'Failed to generate AI content.');
+    } finally {
+      this.generatingNewProductAi.set(false);
+    }
+  }
+
   // Form Submission
   async handleSubmit() {
     if (!this.name || !this.price || !this.sku || !this.categoryId || !this.brandId) {
@@ -632,11 +988,29 @@ export class AdminProductsComponent implements OnInit {
       return;
     }
 
+    // Preserve highlights and tags if editing or duplicating
+    let existingSpecs: any = {};
+    if (this.isEditing() && this.editingProductId()) {
+      const originalProd = this.products().find(p => p.id === this.editingProductId());
+      if (originalProd && originalProd.specs) {
+        try {
+          existingSpecs = JSON.parse(originalProd.specs);
+        } catch (e) {}
+      }
+    } else {
+      existingSpecs = this.duplicateSourceSpecs;
+    }
+
+    const specsObj: any = {
+      highlights: existingSpecs.highlights || [],
+      tags: existingSpecs.tags || []
+    };
+
     // Format specs list back to json object
-    const specsObj: any = {};
     this.specsList.forEach(s => {
-      if (s.key.trim()) {
-        specsObj[s.key.trim()] = s.value.trim();
+      const trimmedKey = s.key.trim();
+      if (trimmedKey && trimmedKey !== 'highlights' && trimmedKey !== 'tags') {
+        specsObj[trimmedKey] = s.value.trim();
       }
     });
 

@@ -42,7 +42,7 @@
               <th class="p-4 text-right">Total Price</th>
               <th class="p-4">Delivery Status</th>
               <th class="p-4">Payment Status</th>
-              <th class="p-4">Tracking Number</th>
+              <th class="p-4">Courier & Tracking</th>
               <th class="p-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -96,15 +96,24 @@
                   </select>
                 </td>
 
-                <!-- Tracking number input -->
+                <!-- Courier & Tracking inputs -->
                 <td class="p-4" (click)="$event.stopPropagation()">
-                  <input
-                    type="text"
-                    [ngModel]="tempTracking[order.id]"
-                    (ngModelChange)="handleInputChange(order.id, 'track', $event)"
-                    placeholder="Tracking ID"
-                    class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 w-32"
-                  />
+                  <div class="flex flex-col gap-1">
+                    <input
+                      type="text"
+                      [ngModel]="tempCourier[order.id]"
+                      (ngModelChange)="handleInputChange(order.id, 'courier', $event)"
+                      placeholder="Courier Name"
+                      class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 w-32"
+                    />
+                    <input
+                      type="text"
+                      [ngModel]="tempTracking[order.id]"
+                      (ngModelChange)="handleInputChange(order.id, 'track', $event)"
+                      placeholder="Tracking ID"
+                      class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 w-32"
+                    />
+                  </div>
                 </td>
 
                 <!-- Save action -->

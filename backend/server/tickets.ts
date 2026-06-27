@@ -101,9 +101,9 @@ ticketsRouter.get('/tickets', async (req: Request, res: Response) => {
     if (search) {
       const searchStr = search as string;
       filters.OR = [
-        { ticketNumber: { contains: searchStr, mode: 'insensitive' } },
-        { customerName: { contains: searchStr, mode: 'insensitive' } },
-        { mobileNumber: { contains: searchStr, mode: 'insensitive' } }
+        { ticketNumber: { contains: searchStr, } },
+        { customerName: { contains: searchStr, } },
+        { mobileNumber: { contains: searchStr, } }
       ];
     }
 
@@ -163,7 +163,7 @@ ticketsRouter.get('/tickets/track', async (req: Request, res: Response) => {
     const tickets = await prisma.serviceTicket.findMany({
       where: {
         OR: [
-          { ticketNumber: { equals: searchStr, mode: 'insensitive' } },
+          { ticketNumber: { equals: searchStr, } },
           { mobileNumber: { equals: searchStr } }
         ]
       },

@@ -24,7 +24,8 @@ export class ResetPasswordComponent implements OnInit {
 
   t = this.langService.t;
 
-  token = '';
+  email = '';
+  otp = '';
   newPassword = '';
   confirmPassword = '';
   loading = signal(false);
@@ -33,16 +34,21 @@ export class ResetPasswordComponent implements OnInit {
 
   ngOnInit() {
     this.route.queryParams.subscribe(params => {
-      this.token = params['token'] || '';
-      if (!this.token) {
-        this.error.set('Invalid or missing password reset token.');
-      }
+      this.email = params['email'] || '';
     });
   }
 
   async handleSubmit(e: Event) {
     e.preventDefault();
-    if (!this.token) return;
+    if (!this.email.trim() || !this.otp.trim() || !this.newPassword.trim()) {
+      this.error.set('All fields are required.');
+      return;
+    }
+
+    if (this.newPassword.length < 6) {
+      this.error.set('Password must be at least 6 characters long.');
+      return;
+    }
 
     if (this.newPassword !== this.confirmPassword) {
       this.error.set('Passwords do not match.');
@@ -57,7 +63,8 @@ export class ResetPasswordComponent implements OnInit {
       await this.authService.ensureCsrfCookie();
       const res = await firstValueFrom(
         this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, {
-          token: this.token,
+          email: this.email.trim(),
+          otp: this.otp.trim(),
           newPassword: this.newPassword
         })
       );
