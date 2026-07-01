@@ -1,13 +1,36 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from './db';
 import { logAudit } from './audit';
+import { TicketStatus, TicketPriority } from '@prisma/client';
 
 export const ticketsRouter = Router();
 
-// Middleware to authenticate user if available, but allow guest saves (optional)
-const optionalAuthenticate = (req: Request, res: Response, next: any) => {
-  next();
-};
+// Helpers to normalize inputs to Prisma Enums
+function normalizePriority(p: string): TicketPriority {
+  if (!p) return TicketPriority.NORMAL;
+  const upper = p.toUpperCase().trim();
+  if (upper === 'LOW') return TicketPriority.LOW;
+  if (upper === 'NORMAL' || upper === 'MEDIUM') return TicketPriority.NORMAL;
+  if (upper === 'HIGH') return TicketPriority.HIGH;
+  if (upper === 'URGENT') return TicketPriority.URGENT;
+  return TicketPriority.NORMAL;
+}
+
+function normalizeStatus(s: string): TicketStatus {
+  if (!s) return TicketStatus.RECEIVED;
+  const upper = s.toUpperCase().trim().replace(/ /g, '_');
+  if (upper === 'RECEIVED') return TicketStatus.RECEIVED;
+  if (upper === 'DIAGNOSING') return TicketStatus.DIAGNOSING;
+  if (upper === 'WAITING_FOR_APPROVAL' || upper === 'WAITING_APPROVAL') return TicketStatus.WAITING_FOR_APPROVAL;
+  if (upper === 'WAITING_FOR_PARTS' || upper === 'WAITING_PARTS') return TicketStatus.WAITING_FOR_PARTS;
+  if (upper === 'REPAIRING' || upper === 'REPAIR_IN_PROGRESS') return TicketStatus.REPAIRING;
+  if (upper === 'TESTING') return TicketStatus.TESTING;
+  if (upper === 'READY_FOR_PICKUP' || upper === 'READY_FOR_DELIVERY' || upper === 'READY') return TicketStatus.READY_FOR_PICKUP;
+  if (upper === 'DELIVERED') return TicketStatus.DELIVERED;
+  if (upper === 'ON_HOLD') return TicketStatus.ON_HOLD;
+  if (upper === 'CANCELLED') return TicketStatus.CANCELLED;
+  return TicketStatus.RECEIVED;
+}
 
 // 1. Create Service Ticket (Admin/Staff only)
 ticketsRouter.post('/tickets', async (req: Request, res: Response) => {
@@ -43,7 +66,7 @@ ticketsRouter.post('/tickets', async (req: Request, res: Response) => {
 
     const creatorEmail = req.user?.email || 'Admin Staff';
     const initialHistory = [{
-      status: 'Received',
+      status: TicketStatus.RECEIVED,
       notes: 'Ticket created successfully',
       updatedAt: new Date().toISOString(),
       updatedBy: creatorEmail
@@ -64,12 +87,12 @@ ticketsRouter.post('/tickets', async (req: Request, res: Response) => {
         assignedTechnician: assignedTechnician || null,
         estimatedCost: parseFloat(estimatedCost),
         notes: notes || null,
-        status: 'Received',
+        status: TicketStatus.RECEIVED,
         history: JSON.stringify(initialHistory),
         deviceSerialNumber: deviceSerialNumber || null,
         accessoriesReceived: accessoriesReceived || null,
         estimatedCompletionDate: estimatedCompletionDate ? new Date(estimatedCompletionDate) : null,
-        priority: priority || 'Medium',
+        priority: normalizePriority(priority),
         deviceCondition: deviceCondition || null,
         serialNumber: serialNumber || null,
         amcId: amcId || null,
@@ -95,7 +118,7 @@ ticketsRouter.get('/tickets', async (req: Request, res: Response) => {
 
     const filters: any = {};
     if (status && status !== 'All') {
-      filters.status = status as string;
+      filters.status = normalizeStatus(status as string);
     }
 
     if (search) {
@@ -124,15 +147,15 @@ ticketsRouter.get('/tickets/stats', async (req: Request, res: Response) => {
   try {
     const tickets = await prisma.serviceTicket.findMany();
 
-    const openCount = tickets.filter(t => t.status !== 'Delivered' && t.status !== 'Cancelled').length;
-    const readyCount = tickets.filter(t => t.status === 'Ready For Delivery').length;
-    const waitingPartsCount = tickets.filter(t => t.status === 'Waiting For Parts').length;
+    const openCount = tickets.filter(t => t.status !== TicketStatus.DELIVERED && t.status !== TicketStatus.CANCELLED).length;
+    const readyCount = tickets.filter(t => t.status === TicketStatus.READY_FOR_PICKUP).length;
+    const waitingPartsCount = tickets.filter(t => t.status === TicketStatus.WAITING_FOR_PARTS).length;
 
     // Delivered Today calculation
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const deliveredTodayCount = tickets.filter(t => {
-      if (t.status !== 'Delivered' || !t.deliveryDate) return false;
+      if (t.status !== TicketStatus.DELIVERED || !t.deliveryDate) return false;
       const dDate = new Date(t.deliveryDate);
       return dDate >= today;
     }).length;
@@ -245,12 +268,13 @@ ticketsRouter.put('/tickets/:id', async (req: Request, res: Response) => {
       updatedHistory = [];
     }
 
-    const statusChanged = status && status !== existing.status;
+    const nextStatus = status ? normalizeStatus(status) : existing.status;
+    const statusChanged = status && nextStatus !== existing.status;
     if (statusChanged) {
       const updaterEmail = req.user?.email || 'Admin Staff';
       updatedHistory.push({
-        status,
-        notes: statusChanged ? `Status updated from ${existing.status} to ${status}` : 'Ticket details updated',
+        status: nextStatus,
+        notes: `Status updated from ${existing.status} to ${nextStatus}`,
         updatedAt: new Date().toISOString(),
         updatedBy: updaterEmail
       });
@@ -269,7 +293,7 @@ ticketsRouter.put('/tickets/:id', async (req: Request, res: Response) => {
       assignedTechnician: assignedTechnician !== undefined ? assignedTechnician : existing.assignedTechnician,
       estimatedCost: estimatedCost !== undefined ? parseFloat(estimatedCost) : existing.estimatedCost,
       notes: notes !== undefined ? notes : existing.notes,
-      status: status !== undefined ? status : existing.status,
+      status: nextStatus,
       history: JSON.stringify(updatedHistory),
       deviceSerialNumber: deviceSerialNumber !== undefined ? deviceSerialNumber : existing.deviceSerialNumber,
       accessoriesReceived: accessoriesReceived !== undefined ? accessoriesReceived : existing.accessoriesReceived,
@@ -279,7 +303,7 @@ ticketsRouter.put('/tickets/:id', async (req: Request, res: Response) => {
       paymentStatus: paymentStatus !== undefined ? paymentStatus : existing.paymentStatus,
       paymentAmount: paymentAmount !== undefined ? (paymentAmount ? parseFloat(paymentAmount) : null) : existing.paymentAmount,
       customerSignature: customerSignature !== undefined ? customerSignature : existing.customerSignature,
-      priority: priority !== undefined ? priority : existing.priority,
+      priority: priority !== undefined ? normalizePriority(priority) : existing.priority,
       deviceCondition: deviceCondition !== undefined ? deviceCondition : existing.deviceCondition,
       serialNumber: serialNumber !== undefined ? serialNumber : existing.serialNumber,
       amcId: amcId !== undefined ? amcId : existing.amcId,
@@ -287,11 +311,11 @@ ticketsRouter.put('/tickets/:id', async (req: Request, res: Response) => {
     };
 
     // Auto set deliveryDate if status is changed to Delivered and it wasn't set
-    if (status === 'Delivered' && !existing.deliveryDate && !deliveryDate) {
+    if (nextStatus === TicketStatus.DELIVERED && !existing.deliveryDate && !deliveryDate) {
       dataToUpdate.deliveryDate = new Date();
     }
     // Auto set actualCompletionDate if status changes to Ready For Delivery / Delivered and it wasn't set
-    if ((status === 'Ready For Delivery' || status === 'Delivered') && !existing.actualCompletionDate && !actualCompletionDate) {
+    if ((nextStatus === TicketStatus.READY_FOR_PICKUP || nextStatus === TicketStatus.DELIVERED) && !existing.actualCompletionDate && !actualCompletionDate) {
       dataToUpdate.actualCompletionDate = new Date();
     }
 

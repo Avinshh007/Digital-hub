@@ -1,0 +1,135 @@
+<div class="min-h-screen bg-transparent pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-xl mx-auto">
+    <!-- Header -->
+    <div class="border-b border-slate-200 dark:border-slate-800/80 pb-4 mb-8 text-center sm:text-left">
+      <h1 class="text-3xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Track Repair Status</h1>
+      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 uppercase font-semibold tracking-wider">
+        Enter your Service ID to view diagnostics and repair timeline
+      </p>
+    </div>
+
+    <!-- Search Input -->
+    <div class="glass-panel p-6 rounded-3xl shadow-md mb-8">
+      <form (submit)="handleTrack()" class="flex flex-col sm:flex-row gap-4">
+        <input
+          type="text"
+          [(ngModel)]="serviceIdInput"
+          name="serviceId"
+          required
+          placeholder="e.g. DH-SR-10001"
+          class="flex-1 bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 px-4 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-slate-800 dark:text-slate-100 transition-all placeholder-slate-400 font-mono uppercase"
+        />
+        <button
+          type="submit"
+          [disabled]="loading()"
+          class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-lg transition-all"
+        >
+          Track Status
+        </button>
+      </form>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="error()" class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 p-6 rounded-3xl text-xs font-semibold mb-8 animate-fade-in text-center">
+      {{ error() }}
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="h-48 flex flex-col items-center justify-center space-y-2">
+      <svg class="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="text-[9px] text-slate-400 font-black tracking-widest uppercase">Fetching details...</span>
+    </div>
+
+    <!-- Ticket Details & Timeline -->
+    <div *ngIf="!loading() && ticket()" class="glass-panel p-8 sm:p-10 rounded-[2.5rem] shadow-xl relative overflow-hidden animate-fade-in">
+      <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full pointer-events-none"></div>
+
+      <!-- Ticket Metadata -->
+      <div class="border-b border-slate-100 dark:border-slate-800 pb-6 mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">Service ID</span>
+            <span class="text-xl font-black text-slate-850 dark:text-slate-100 tracking-wider font-mono uppercase">{{ ticket().ticketNumber }}</span>
+          </div>
+          <div>
+            <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">Status</span>
+            <span class="inline-block bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full">
+              {{ ticket().status }}
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800/40 text-xs">
+          <div>
+            <span class="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Device Details</span>
+            <span class="font-bold text-slate-850 dark:text-slate-100">{{ ticket().brand }} {{ ticket().model }}</span>
+            <span class="block text-[10px] text-slate-450 dark:text-slate-500 font-mono mt-0.5" *ngIf="ticket().serialNumber">
+              S/N: {{ ticket().serialNumber }}
+            </span>
+          </div>
+          <div *ngIf="ticket().expectedDeliveryDate">
+            <span class="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">Estimated Completion</span>
+            <span class="font-bold text-slate-850 dark:text-slate-100">{{ ticket().expectedDeliveryDate | date:'dd MMMM, yyyy' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Problem description -->
+      <div class="mb-8">
+        <span class="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Reported Problem</span>
+        <div class="bg-slate-50 dark:bg-slate-900/40 border border-slate-150 dark:border-slate-850 rounded-2xl p-4 text-xs font-semibold text-slate-650 dark:text-slate-400 italic">
+          "{{ ticket().problemDescription }}"
+        </div>
+      </div>
+
+      <!-- Timeline Stepper -->
+      <div>
+        <span class="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6">Repair Journey Timeline</span>
+
+        <div class="relative pl-8 space-y-8 border-l-2 border-slate-100 dark:border-slate-800 ml-3">
+          <div
+            *ngFor="let stage of statusStages; let idx = index"
+            class="relative"
+          >
+            <!-- Timeline node point -->
+            <div
+              [ngClass]="{
+                'bg-emerald-500 text-white ring-8 ring-emerald-500/10': idx <= getStageIndex(ticket().status),
+                'bg-slate-200 dark:bg-slate-850 text-slate-400': idx > getStageIndex(ticket().status)
+              }"
+              class="absolute -left-[41px] top-0.5 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300"
+            >
+              <svg *ngIf="idx <= getStageIndex(ticket().status)" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span *ngIf="idx > getStageIndex(ticket().status)" class="text-[9px] font-black">{{ idx + 1 }}</span>
+            </div>
+
+            <!-- Stage text description -->
+            <div>
+              <h4
+                [ngClass]="{
+                  'text-slate-800 dark:text-slate-100 font-bold': idx <= getStageIndex(ticket().status),
+                  'text-slate-400 dark:text-slate-600': idx > getStageIndex(ticket().status)
+                }"
+                class="text-xs uppercase tracking-wider"
+              >
+                {{ stage }}
+              </h4>
+              <p
+                *ngIf="idx === getStageIndex(ticket().status)"
+                class="text-[10px] text-slate-450 dark:text-slate-500 mt-0.5"
+              >
+                Your device is currently undergoing this stage.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

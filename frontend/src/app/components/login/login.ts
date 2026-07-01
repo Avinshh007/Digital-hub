@@ -141,7 +141,7 @@ export class LoginComponent {
     this.error.set(null);
     try {
       // Sign in with the seeded customer account for simulation
-      await this.authService.login('customer@  DIGITAL HUB.com', 'customer123', true);
+      await this.authService.login('customer@sripavan.com', 'customer123', true);
       this.router.navigate(['/']);
     } catch (err: any) {
       this.error.set('Google sign-in simulation failed.');

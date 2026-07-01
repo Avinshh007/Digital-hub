@@ -1,10 +1,25 @@
 // server/auth.ts
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
 import { Response } from 'express';
+import { UserRole } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || ' _ DIGITAL HUB_computers_secret_jwt_key_secure_2026';
+
+// Centralized Authorization Layer
+export function getPermissionsForRole(role: UserRole): string[] {
+  switch (role) {
+    case UserRole.ADMIN:
+      return ['all'];
+    case UserRole.SERVICE_MANAGER:
+      return ['view_services', 'manage_services', 'assign_technician', 'view_audit_logs'];
+    case UserRole.TECHNICIAN:
+      return ['view_services', 'perform_repairs'];
+    case UserRole.CUSTOMER:
+    default:
+      return ['view_own_services'];
+  }
+}
 
 // Password hashing
 export function hashPassword(password: string): string {
@@ -16,21 +31,21 @@ export function comparePassword(password: string, hash: string): boolean {
 }
 
 // Server-side JWT signature signing
-export function signToken(payload: { id: string; email: string; role: string; name: string }): string {
+export function signToken(payload: { id: string; email: string; role: UserRole; name: string }): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
 }
 
 // Server-side JWT signature verification
-export function verifyToken(token: string): { id: string; email: string; role: string; name: string } | null {
+export function verifyToken(token: string): { id: string; email: string; role: UserRole; name: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { id: string; email: string; role: string; name: string };
+    return jwt.verify(token, JWT_SECRET) as { id: string; email: string; role: UserRole; name: string };
   } catch (error) {
     return null;
   }
 }
 
 // Sets short-lived access token and HttpOnly refresh token
-export function setAuthCookies(res: Response, payload: { id: string; email: string; role: string; name: string }, rememberMe = false) {
+export function setAuthCookies(res: Response, payload: { id: string; email: string; role: UserRole; name: string }, rememberMe = false) {
   const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
   const refreshToken = jwt.sign(payload, JWT_SECRET, { expiresIn: rememberMe ? '30d' : '7d' });
 

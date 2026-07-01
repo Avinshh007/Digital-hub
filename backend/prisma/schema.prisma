@@ -14,7 +14,17 @@ model User {
   email           String           @unique
   passwordHash    String
   name            String
-  role            String           @default("CUSTOMER") // "CUSTOMER" or "ADMIN"
+  role            UserRole         @default(CUSTOMER)
+  
+  // Employee profile fields
+  employeeId      String?          @unique
+  department      String?
+  designation     String?
+  profileImage    String?
+  phone           String?
+  joiningDate     DateTime?
+  isActive        Boolean          @default(true)
+
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   orders          Order[]
@@ -27,6 +37,7 @@ model User {
   notifications   Notification[]
   savedBuilds     SavedBuild[]
   auditLogs       AuditLog[]
+  assignedTickets ServiceTicket[]  @relation("TechnicianTickets")
 }
 
 model Category {
@@ -464,6 +475,7 @@ model ServiceTicket {
   ticketNumber            String    @unique // Auto-generated e.g. "DHT-10001", "DHT-10002"
   customerName            String
   mobileNumber            String
+  email                   String?
   deviceType              String    // e.g. "Laptop", "Desktop", "Printer", etc.
   brand                   String
   model                   String
@@ -472,9 +484,13 @@ model ServiceTicket {
   expectedDeliveryDate    DateTime
   technicianName          String?   // For backward compatibility
   assignedTechnician      String?   // Assigned technician name
+  
+  assignedTechnicianId    String?
+  technician              User?             @relation("TechnicianTickets", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+
   estimatedCost           Float
   notes                   String?
-  status                  String    @default("Received") // "Received" | "Diagnosing" | "Waiting For Approval" | "Waiting For Parts" | "Repair In Progress" | "Ready For Delivery" | "Delivered" | "Cancelled"
+  status                  TicketStatus      @default(RECEIVED)
   history                 String    // JSON array string tracking status transition history logs
 
   // Enhanced fields
@@ -486,8 +502,25 @@ model ServiceTicket {
   paymentStatus           String    @default("Pending") // "Pending", "Paid", etc.
   paymentAmount           Float?
   customerSignature       String?   // Base64 signature image drawing data or text
-  priority                String    @default("Medium")  // "Low" | "Medium" | "High" | "Urgent"
+  priority                TicketPriority    @default(NORMAL)
   deviceCondition         String?   // e.g. "Good", "Scratched", etc.
+
+  // Technician inputs
+  diagnosis               String?
+  observations            String?
+  internalNotes           String?           // Visible to employees only
+  
+  // Cost breakdown estimates
+  partsCost               Float             @default(0.0)
+  labourCost              Float             @default(0.0)
+  otherCharges            Float             @default(0.0)
+  taxAmount               Float             @default(0.0)   // GST
+  discountAmount          Float             @default(0.0)   // Discount
+  totalCost               Float             @default(0.0)   // Grand Total
+  
+  // Generalized attachments JSON stringified list of objects:
+  // { id, name, url, fileType, category, uploadedAt, uploadedBy }
+  attachments             String?
 
   // Future Compatibility Fields (Loose Foreign Keys)
   serialNumber            String?   // Connects to ProductSerialNumber/Warranty
@@ -497,8 +530,53 @@ model ServiceTicket {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
+  // Audit Logs relation
+  serviceAuditLogs        ServiceAuditLog[]
+
   @@index([status])
   @@index([mobileNumber])
   @@index([ticketNumber])
+  @@index([assignedTechnicianId])
+}
+
+model ServiceAuditLog {
+  id              String        @id @default(uuid())
+  ticketId        String
+  ticket          ServiceTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userEmail       String
+  userName        String
+  previousStatus  String
+  newStatus       String
+  remarks         String?
+  createdAt       DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  TECHNICIAN
+  SERVICE_MANAGER
+}
+
+enum TicketStatus {
+  RECEIVED
+  DIAGNOSING
+  WAITING_FOR_APPROVAL
+  WAITING_FOR_PARTS
+  REPAIRING
+  TESTING
+  READY_FOR_PICKUP
+  DELIVERED
+  ON_HOLD
+  CANCELLED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
 

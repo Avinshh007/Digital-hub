@@ -57,6 +57,7 @@ import { ThemeService } from '../../services/theme.service';
             <div class="flex space-x-4 text-sm font-semibold tracking-wide">
               <a routerLink="/products" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">{{ t().shop }}</a>
               <a routerLink="/pc-builder" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">PC Builder</a>
+              <a routerLink="/services" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">Services</a>
               <a routerLink="/warranty" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">Warranty Check</a>
               <a routerLink="/track-repair" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">Track Repair</a>
               <a routerLink="/about" routerLinkActive="text-amber-500" [ngClass]="scrolled() ? 'text-slate-600 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="transition-colors">{{ t().aboutUs }}</a>
@@ -107,6 +108,10 @@ import { ThemeService } from '../../services/theme.service';
               <a *ngIf="user()?.role === 'ADMIN'" routerLink="/admin" [ngClass]="scrolled() ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-amber-400/10 text-amber-400 hover:text-amber-300'" class="flex items-center space-x-1.5 text-xs font-bold px-2.5 py-1.5 rounded-md transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
                 <span>{{ t().adminDashboard }}</span>
+              </a>
+              <a *ngIf="user()?.role === 'TECHNICIAN' || user()?.role === 'SERVICE_MANAGER'" routerLink="/technician/dashboard" [ngClass]="scrolled() ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-amber-400/10 text-amber-400 hover:text-amber-300'" class="flex items-center space-x-1.5 text-xs font-bold px-2.5 py-1.5 rounded-md transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+                <span>Workspace</span>
               </a>
               <a routerLink="/profile" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600' : 'text-slate-200 hover:text-amber-400'" class="flex items-center space-x-1.5 text-sm font-semibold transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
@@ -193,6 +198,7 @@ import { ThemeService } from '../../services/theme.service';
         <div class="flex flex-col space-y-3 font-semibold text-sm">
           <a routerLink="/products" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors">{{ t().shop }}</a>
           <a routerLink="/pc-builder" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors">PC Builder</a>
+          <a routerLink="/services" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors">Services</a>
           <a routerLink="/track-repair" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors">Track Repair</a>
           <a routerLink="/wishlist" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-slate-700 hover:text-blue-600 border-slate-100' : 'text-slate-200 hover:text-amber-400 border-blue-900/50'" class="py-1 border-b transition-colors flex items-center justify-between">
             <span>{{ t().wishlist }}</span>
@@ -205,6 +211,10 @@ import { ThemeService } from '../../services/theme.service';
           <a *ngIf="user()?.role === 'ADMIN'" routerLink="/admin" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-blue-600 hover:text-blue-700 border-slate-100' : 'text-amber-400 hover:text-amber-300 border-blue-900/50'" class="py-1 border-b transition-colors flex items-center space-x-2 font-bold">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
             <span>{{ t().adminDashboard }}</span>
+          </a>
+          <a *ngIf="user()?.role === 'TECHNICIAN' || user()?.role === 'SERVICE_MANAGER'" routerLink="/technician/dashboard" (click)="closeMobileMenu()" [ngClass]="scrolled() ? 'text-blue-600 hover:text-blue-700 border-slate-100' : 'text-amber-400 hover:text-amber-300 border-blue-900/50'" class="py-1 border-b transition-colors flex items-center space-x-2 font-bold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+            <span>Technician Workspace</span>
           </a>
         </div>
 

@@ -11,7 +11,8 @@ import fs from 'fs';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 import { prisma } from './db';
-import { verifyToken, comparePassword, hashPassword, signToken, setAuthCookies } from './auth';
+import { UserRole, TicketStatus, TicketPriority } from '@prisma/client';
+import { verifyToken, comparePassword, hashPassword, signToken, setAuthCookies, getPermissionsForRole } from './auth';
 import { generateInvoicePDF } from './invoice';
 import { isCloudinaryConfigured, uploadToCloudinary, deleteFromCloudinary } from './cloudinary';
 import { vendorRouter } from './vendors';
@@ -116,7 +117,7 @@ declare global {
       user?: {
         id: string;
         email: string;
-        role: string;
+        role: UserRole;
         name: string;
       };
     }
@@ -154,8 +155,29 @@ const optionalAuthenticate = (req: Request, res: Response, next: NextFunction) =
 // Admin Protection Middleware
 const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   authenticate(req, res, () => {
-    if (!req.user || req.user.role !== 'ADMIN') {
+    if (!req.user || req.user.role !== UserRole.ADMIN) {
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
+    }
+    next();
+  });
+};
+
+// Service Manager or Admin Protection Middleware
+const requireServiceManagerOrAdmin = (req: Request, res: Response, next: NextFunction) => {
+  authenticate(req, res, () => {
+    if (!req.user || (req.user.role !== UserRole.SERVICE_MANAGER && req.user.role !== UserRole.ADMIN)) {
+      return res.status(403).json({ error: 'Forbidden: Service Manager or Admin access required' });
+    }
+    next();
+  });
+};
+
+// Technician, Service Manager, or Admin Protection Middleware
+const requireTechnicianOrManagerOrAdmin = (req: Request, res: Response, next: NextFunction) => {
+  authenticate(req, res, () => {
+    const role = req.user?.role;
+    if (!req.user || (role !== UserRole.TECHNICIAN && role !== UserRole.SERVICE_MANAGER && role !== UserRole.ADMIN)) {
+      return res.status(403).json({ error: 'Forbidden: Service Technician, Manager, or Admin access required' });
     }
     next();
   });
@@ -183,7 +205,16 @@ app.get('/api/auth/me', async (req: Request, res: Response) => {
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
 
-    return res.json({ user });
+    if (!user) {
+      return res.json({ user: null });
+    }
+
+    return res.json({
+      user: {
+        ...user,
+        permissions: getPermissionsForRole(user.role)
+      }
+    });
   } catch (error) {
     console.error('Auth check error:', error);
     return res.json({ user: null });
@@ -274,7 +305,7 @@ app.post('/api/auth/verify-email', async (req: Request, res: Response) => {
     const passwordHash = hashPassword(password);
 
     const userCount = await prisma.user.count();
-    const role = userCount === 0 ? 'ADMIN' : 'CUSTOMER';
+    const role = userCount === 0 ? UserRole.ADMIN : UserRole.CUSTOMER;
 
     const user = await prisma.user.create({
       data: {
@@ -307,7 +338,7 @@ app.post('/api/auth/verify-email', async (req: Request, res: Response) => {
 
     // Notify admins of new user registration
     try {
-      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+      const admins = await prisma.user.findMany({ where: { role: UserRole.ADMIN } });
       for (const admin of admins) {
         await sendAdminNewUserEmail(admin.email, user);
       }
@@ -317,7 +348,7 @@ app.post('/api/auth/verify-email', async (req: Request, res: Response) => {
 
     return res.json({
       message: 'Account verified and registered successfully',
-      user: { id: user.id, email: user.email, role: user.role, name: user.name }
+      user: { id: user.id, email: user.email, role: user.role, name: user.name, permissions: getPermissionsForRole(user.role) }
     });
   } catch (error) {
     console.error('Verify OTP error:', error);
@@ -357,7 +388,13 @@ app.post('/api/auth/login', authLimiter, async (req: Request, res: Response) => 
 
     return res.json({
       message: 'Logged in successfully',
-      user: { id: user.id, email: user.email, role: user.role, name: user.name }
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        permissions: getPermissionsForRole(user.role)
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -562,6 +599,128 @@ app.put('/api/auth/change-password', authenticate, async (req: Request, res: Res
     return res.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Change password error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/* ==========================================================================
+   EMPLOYEE MANAGEMENT ENDPOINTS (Admin only)
+   ========================================================================== */
+
+// GET /api/admin/employees
+app.get('/api/admin/employees', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const employees = await prisma.user.findMany({
+      where: {
+        role: {
+          in: [UserRole.ADMIN, UserRole.TECHNICIAN, UserRole.SERVICE_MANAGER]
+        }
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        employeeId: true,
+        department: true,
+        designation: true,
+        profileImage: true,
+        phone: true,
+        joiningDate: true,
+        isActive: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json({ employees });
+  } catch (error) {
+    console.error('Get employees error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/admin/employees
+app.post('/api/admin/employees', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { name, email, password, role, employeeId, department, designation, phone, joiningDate } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: 'Name, email, password, and role are required' });
+    }
+
+    const validRoles = [UserRole.ADMIN, UserRole.TECHNICIAN, UserRole.SERVICE_MANAGER];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid employee role specified' });
+    }
+
+    const emailClean = email.toLowerCase().trim();
+    const existingEmail = await prisma.user.findUnique({ where: { email: emailClean } });
+    if (existingEmail) {
+      return res.status(400).json({ error: 'Email is already registered' });
+    }
+
+    if (employeeId) {
+      const existingEmpId = await prisma.user.findUnique({ where: { employeeId: employeeId.trim() } });
+      if (existingEmpId) {
+        return res.status(400).json({ error: 'Employee ID is already assigned' });
+      }
+    }
+
+    const passwordHash = hashPassword(password);
+
+    const employee = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: emailClean,
+        passwordHash,
+        role,
+        employeeId: employeeId ? employeeId.trim() : null,
+        department: department ? department.trim() : null,
+        designation: designation ? designation.trim() : null,
+        phone: phone ? phone.trim() : null,
+        joiningDate: joiningDate ? new Date(joiningDate) : null,
+        isActive: true
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        employeeId: true,
+        department: true,
+        designation: true,
+        phone: true,
+        joiningDate: true,
+        isActive: true
+      }
+    });
+
+    return res.status(201).json({ message: 'Employee created successfully', employee });
+  } catch (error) {
+    console.error('Create employee error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/admin/employees/:id
+app.delete('/api/admin/employees/:id', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    
+    // Don't allow admin to delete themselves
+    if (id === req.user!.id) {
+      return res.status(400).json({ error: 'You cannot delete your own account' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    await prisma.user.delete({ where: { id } });
+    return res.json({ message: 'Employee account deleted successfully' });
+  } catch (error) {
+    console.error('Delete employee error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -2622,7 +2781,7 @@ app.post('/api/products/:id/reviews', authenticate, async (req: Request, res: Re
 app.get('/api/orders', authenticate, async (req: Request, res: Response) => {
   try {
     let orders;
-    if (req.user!.role === 'ADMIN') {
+    if (req.user!.role === UserRole.ADMIN) {
       orders = await prisma.order.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
@@ -2663,7 +2822,7 @@ app.get('/api/orders/:id', authenticate, async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    if (req.user!.role !== 'ADMIN' && order.userId !== req.user!.id) {
+    if (req.user!.role !== UserRole.ADMIN && order.userId !== req.user!.id) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -2683,7 +2842,7 @@ app.get('/api/orders/:id/invoice', authenticate, async (req: Request, res: Respo
   if (!order) {
     return res.status(404).json({ error: 'Order not found' });
   }
-  if (req.user!.role !== 'ADMIN' && order.userId !== req.user!.id) {
+  if (req.user!.role !== UserRole.ADMIN && order.userId !== req.user!.id) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
@@ -2830,7 +2989,7 @@ app.post('/api/orders', authenticate, async (req: Request, res: Response) => {
 
       // Notify administrators
       try {
-        const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+        const admins = await prisma.user.findMany({ where: { role: UserRole.ADMIN } });
         for (const admin of admins) {
           await sendAdminNewOrderEmail(admin.email, fullOrder);
         }
@@ -3023,7 +3182,7 @@ app.post('/api/services/bookings', bookingLimiter, optionalAuthenticate, async (
 app.get('/api/services/bookings', authenticate, async (req: Request, res: Response) => {
   try {
     let bookings;
-    if (req.user!.role === 'ADMIN') {
+    if (req.user!.role === UserRole.ADMIN) {
       bookings = await prisma.serviceBooking.findMany({
         orderBy: { createdAt: 'desc' }
       });
@@ -3036,6 +3195,564 @@ app.get('/api/services/bookings', authenticate, async (req: Request, res: Respon
     return res.json({ bookings });
   } catch (error) {
     console.error('Get service bookings error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/* ==========================================================================
+   SPRINT 1 SERVICE MANAGEMENT MODULE ENDPOINTS
+   ========================================================================== */
+
+// Helper to generate unique Service ID in DH-SR-XXXXX format
+async function generateServiceId() {
+  const latestTicket = await prisma.serviceTicket.findFirst({
+    where: {
+      ticketNumber: {
+        startsWith: 'DH-SR-'
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+
+  if (!latestTicket) {
+    return 'DH-SR-10001';
+  }
+
+  const match = latestTicket.ticketNumber.match(/DH-SR-(\d+)/);
+  if (match) {
+    const nextNum = parseInt(match[1], 10) + 1;
+    return `DH-SR-${nextNum}`;
+  }
+
+  const count = await prisma.serviceTicket.count();
+  return `DH-SR-${10001 + count}`;
+}
+
+// POST /api/services (Book Service)
+app.post('/api/services', async (req: Request, res: Response) => {
+  try {
+    const { customerName, mobileNumber, email, deviceType, brand, model, serialNumber, problemDescription } = req.body;
+
+    if (!customerName || !mobileNumber || !deviceType || !brand || !model || !problemDescription) {
+      return res.status(400).json({ error: 'Required fields are missing' });
+    }
+
+    const ticketNumber = await generateServiceId();
+
+    const ticket = await prisma.serviceTicket.create({
+      data: {
+        ticketNumber,
+        customerName: customerName.trim(),
+        mobileNumber: mobileNumber.trim(),
+        email: email ? email.trim() : null,
+        deviceType: deviceType.trim(),
+        brand: brand.trim(),
+        model: model.trim(),
+        serialNumber: serialNumber ? serialNumber.trim() : null,
+        deviceSerialNumber: serialNumber ? serialNumber.trim() : null,
+        problemDescription: problemDescription.trim(),
+        expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+        estimatedCost: 0,
+        status: TicketStatus.RECEIVED,
+        history: JSON.stringify([{
+          status: TicketStatus.RECEIVED,
+          notes: 'Service booking request submitted online',
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'Customer'
+        }]),
+        priority: TicketPriority.NORMAL,
+        paymentStatus: 'Pending',
+        paymentAmount: 0
+      }
+    });
+
+    // Create Admin notification
+    await prisma.notification.create({
+      data: {
+        title: 'New Service Ticket Created',
+        message: `Ticket ${ticketNumber} created for ${customerName} (${deviceType}).`,
+        type: 'SERVICE'
+      }
+    });
+
+    console.log(`\n======================================================`);
+    console.log(`[WHATSAPP SIMULATOR] To: ${mobileNumber}`);
+    console.log(`Message: DIGITAL HUB- Service Booking Confirmed! We received your repair request for: ${deviceType}. Tracking ID: ${ticketNumber}`);
+    console.log(`======================================================\n`);
+
+    return res.status(201).json({ message: 'Service ticket created successfully', ticket });
+  } catch (error) {
+    console.error('Create service ticket error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/services (Get all ServiceTickets)
+app.get('/api/services', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const tickets = await prisma.serviceTicket.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json({ tickets });
+  } catch (error) {
+    console.error('Fetch service tickets error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/services/:serviceId (Track Service by ServiceId / ticketNumber)
+app.get('/api/services/:serviceId', async (req: Request, res: Response) => {
+  try {
+    const serviceId = req.params.serviceId as string;
+    const ticket = await prisma.serviceTicket.findUnique({
+      where: { ticketNumber: serviceId }
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Service ticket not found' });
+    }
+
+    delete (ticket as any).internalNotes;
+
+    return res.json({ ticket });
+  } catch (error) {
+    console.error('Get service ticket by ID error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/services/:id/status (Admin change status)
+app.patch('/api/services/:id/status', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { status } = req.body;
+
+    const allowedStatuses = [
+      'Received',
+      'Diagnosing',
+      'Waiting For Approval',
+      'Repairing',
+      'Testing',
+      'Ready For Pickup',
+      'Delivered'
+    ];
+
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid or missing status' });
+    }
+
+    const existingTicket = await prisma.serviceTicket.findUnique({
+      where: { id }
+    });
+
+    if (!existingTicket) {
+      return res.status(404).json({ error: 'Service ticket not found' });
+    }
+
+    let parsedHistory = [];
+    try {
+      if (existingTicket.history) {
+        parsedHistory = JSON.parse(existingTicket.history);
+      }
+    } catch (e) {
+      console.error('Error parsing ticket history:', e);
+    }
+
+    parsedHistory.push({
+      status,
+      notes: `Status updated from ${existingTicket.status} to ${status}`,
+      updatedAt: new Date().toISOString(),
+      updatedBy: 'Admin'
+    });
+
+    const updatedTicket = await prisma.serviceTicket.update({
+      where: { id },
+      data: {
+        status,
+        history: JSON.stringify(parsedHistory)
+      }
+    });
+
+    console.log(`\n======================================================`);
+    console.log(`[WHATSAPP SIMULATOR] To: ${updatedTicket.mobileNumber}`);
+    console.log(`Message: DIGITAL HUB- Repair status updated! Your ticket ${updatedTicket.ticketNumber} is now: ${status}.`);
+    console.log(`======================================================\n`);
+
+    return res.json({ message: 'Service ticket status updated successfully', ticket: updatedTicket });
+  } catch (error) {
+    console.error('Update service ticket status error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/* ==========================================================================
+   SPRINT 2 TECHNICIAN WORKFLOW & ASSIGNMENT ENDPOINTS
+   ========================================================================== */
+
+// GET /api/admin/technicians (Admin / Service Manager only)
+app.get('/api/admin/technicians', requireServiceManagerOrAdmin, async (req: Request, res: Response) => {
+  try {
+    const technicians = await prisma.user.findMany({
+      where: { role: UserRole.TECHNICIAN, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        employeeId: true,
+        department: true,
+        designation: true,
+        assignedTickets: {
+          where: {
+            NOT: {
+              status: { in: [TicketStatus.DELIVERED, TicketStatus.CANCELLED] }
+            }
+          },
+          select: { id: true }
+        }
+      }
+    });
+
+    const mapped = technicians.map(tech => ({
+      id: tech.id,
+      name: tech.name,
+      email: tech.email,
+      employeeId: tech.employeeId,
+      department: tech.department,
+      designation: tech.designation,
+      activeJobsCount: tech.assignedTickets.length
+    }));
+
+    // Sort by activeJobsCount (lowest first), then name alphabetically
+    mapped.sort((a, b) => {
+      if (a.activeJobsCount !== b.activeJobsCount) {
+        return a.activeJobsCount - b.activeJobsCount;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    return res.json({ technicians: mapped });
+  } catch (error) {
+    console.error('Fetch technicians error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/technician/jobs (Technician / Manager / Admin)
+app.get('/api/technician/jobs', requireTechnicianOrManagerOrAdmin, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const role = req.user!.role;
+
+    let tickets;
+    if (role === UserRole.TECHNICIAN) {
+      tickets = await prisma.serviceTicket.findMany({
+        where: { assignedTechnicianId: userId },
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }]
+      });
+    } else {
+      // Admins & Managers see all assigned tickets
+      tickets = await prisma.serviceTicket.findMany({
+        where: { NOT: { assignedTechnicianId: null } },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
+    return res.json({ tickets });
+  } catch (error) {
+    console.error('Fetch technician jobs error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/technician/service-queue (Technician / Manager / Admin)
+app.get('/api/technician/service-queue', requireTechnicianOrManagerOrAdmin, async (req: Request, res: Response) => {
+  try {
+    const tickets = await prisma.serviceTicket.findMany({
+      where: {
+        NOT: {
+          status: { in: [TicketStatus.DELIVERED, TicketStatus.CANCELLED] }
+        }
+      },
+      select: {
+        id: true,
+        ticketNumber: true,
+        customerName: true,
+        deviceType: true,
+        brand: true,
+        model: true,
+        assignedTechnician: true,
+        status: true,
+        priority: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json({ tickets });
+  } catch (error) {
+    console.error('Fetch service queue error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/technician/service/:id (Technician / Manager / Admin)
+app.get('/api/technician/service/:id', requireTechnicianOrManagerOrAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const ticket = await prisma.serviceTicket.findUnique({
+      where: { id },
+      include: {
+        serviceAuditLogs: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Service ticket not found' });
+    }
+
+    return res.json({ ticket });
+  } catch (error) {
+    console.error('Get technician service ticket error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/technician/service/:id (Technician / Manager / Admin)
+app.patch('/api/technician/service/:id', requireTechnicianOrManagerOrAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const {
+      status,
+      priority,
+      diagnosis,
+      observations,
+      internalNotes,
+      partsCost,
+      labourCost,
+      otherCharges,
+      taxAmount,
+      discountAmount,
+      estimatedCompletionDate,
+      remarks
+    } = req.body;
+
+    const ticket = await prisma.serviceTicket.findUnique({ where: { id } });
+    if (!ticket) {
+      return res.status(404).json({ error: 'Service ticket not found' });
+    }
+
+    if (req.user!.role === UserRole.TECHNICIAN && ticket.assignedTechnicianId !== req.user!.id) {
+      return res.status(403).json({ error: 'Forbidden: You are not assigned to this repair' });
+    }
+
+    // Cost calculations
+    const pCost = parseFloat(partsCost) || 0;
+    const lCost = parseFloat(labourCost) || 0;
+    const oCharges = parseFloat(otherCharges) || 0;
+    const tAmt = parseFloat(taxAmount) || 0;
+    const dAmt = parseFloat(discountAmount) || 0;
+    const totalCost = (pCost + lCost + oCharges + tAmt) - dAmt;
+
+    // Track status change for history & audit log
+    const prevStatus = ticket.status;
+    const nextStatus = status || prevStatus;
+    const statusChanged = prevStatus !== nextStatus;
+
+    let parsedHistory = [];
+    try {
+      if (ticket.history) {
+        parsedHistory = JSON.parse(ticket.history);
+      }
+    } catch (e) {
+      console.error('Failed to parse history:', e);
+    }
+
+    if (statusChanged) {
+      parsedHistory.push({
+        status: nextStatus,
+        notes: remarks || `Status updated from ${prevStatus} to ${nextStatus}`,
+        updatedAt: new Date().toISOString(),
+        updatedBy: req.user!.name
+      });
+    }
+
+    const updated = await prisma.serviceTicket.update({
+      where: { id },
+      data: {
+        status: nextStatus,
+        priority: priority || ticket.priority,
+        diagnosis: diagnosis !== undefined ? diagnosis : ticket.diagnosis,
+        observations: observations !== undefined ? observations : ticket.observations,
+        internalNotes: internalNotes !== undefined ? internalNotes : ticket.internalNotes,
+        partsCost: pCost,
+        labourCost: lCost,
+        otherCharges: oCharges,
+        taxAmount: tAmt,
+        discountAmount: dAmt,
+        totalCost: totalCost,
+        estimatedCost: totalCost, // Keep Sprint 1 compatibility
+        estimatedCompletionDate: estimatedCompletionDate ? new Date(estimatedCompletionDate) : ticket.estimatedCompletionDate,
+        actualCompletionDate: nextStatus === TicketStatus.DELIVERED || nextStatus === TicketStatus.READY_FOR_PICKUP ? new Date() : ticket.actualCompletionDate,
+        history: JSON.stringify(parsedHistory)
+      }
+    });
+
+    // Write ServiceAuditLog
+    await prisma.serviceAuditLog.create({
+      data: {
+        ticketId: id,
+        userEmail: req.user!.email,
+        userName: req.user!.name,
+        previousStatus: prevStatus,
+        newStatus: nextStatus,
+        remarks: remarks || `Technician workflow update. Cost: ₹${totalCost.toFixed(2)}`
+      }
+    });
+
+    if (statusChanged) {
+      console.log(`\n======================================================`);
+      console.log(`[WHATSAPP SIMULATOR] To: ${updated.mobileNumber}`);
+      console.log(`Message: DIGITAL HUB- Repair status updated! Your ticket ${updated.ticketNumber} is now: ${nextStatus}.`);
+      console.log(`======================================================\n`);
+    }
+
+    return res.json({ message: 'Service ticket updated successfully', ticket: updated });
+  } catch (error) {
+    console.error('Workflow update error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/services/:id/assign (Admin / Service Manager only)
+app.patch('/api/services/:id/assign', requireServiceManagerOrAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { technicianId } = req.body;
+
+    const ticket = await prisma.serviceTicket.findUnique({ where: { id } });
+    if (!ticket) {
+      return res.status(404).json({ error: 'Service ticket not found' });
+    }
+
+    let techName = null;
+    if (technicianId) {
+      const techUser = await prisma.user.findFirst({
+        where: { id: technicianId, role: { in: [UserRole.TECHNICIAN, UserRole.ADMIN, UserRole.SERVICE_MANAGER] } }
+      });
+      if (!techUser) {
+        return res.status(400).json({ error: 'Selected technician user not found' });
+      }
+      techName = techUser.name;
+    }
+
+    const updated = await prisma.serviceTicket.update({
+      where: { id },
+      data: {
+        assignedTechnicianId: technicianId || null,
+        assignedTechnician: techName,
+        technicianName: techName // Keep Sprint 1 compatibility
+      }
+    });
+
+    // Create Audit Log
+    await prisma.serviceAuditLog.create({
+      data: {
+        ticketId: id,
+        userEmail: req.user!.email,
+        userName: req.user!.name,
+        previousStatus: ticket.status,
+        newStatus: ticket.status,
+        remarks: techName ? `Technician assigned: ${techName}` : 'Technician unassigned'
+      }
+    });
+
+    return res.json({ message: 'Technician assignment updated', ticket: updated });
+  } catch (error) {
+    console.error('Assign technician error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/services/:id/audit-logs (Admin / Service Manager only)
+app.get('/api/services/:id/audit-logs', requireServiceManagerOrAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const logs = await prisma.serviceAuditLog.findMany({
+      where: { ticketId: id },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.json({ logs });
+  } catch (error) {
+    console.error('Get service audit logs error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/services/:id/attachments (Technician / Manager / Admin)
+app.post('/api/services/:id/attachments', requireTechnicianOrManagerOrAdmin, upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { category } = req.body; // e.g. "INSPECTION_PHOTO", "REPAIR_PHOTO", "WARRANTY_DOC", "INVOICE_ATTACHMENT", etc.
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const ticket = await prisma.serviceTicket.findUnique({ where: { id } });
+    if (!ticket) {
+      return res.status(404).json({ error: 'Service ticket not found' });
+    }
+
+    let fileUrl = '';
+    if (isCloudinaryConfigured) {
+      fileUrl = await uploadToCloudinary(req.file.buffer, 'repairs');
+    } else {
+      const uploadDir = path.resolve(process.cwd(), '../frontend/public/uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      const filename = `attachment_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${ext}`;
+      const destPath = path.join(uploadDir, filename);
+      fs.writeFileSync(destPath, req.file.buffer);
+      fileUrl = `/uploads/${filename}`;
+    }
+
+    // Append to attachments array
+    let currentAttachments = [];
+    try {
+      if (ticket.attachments) {
+        currentAttachments = JSON.parse(ticket.attachments);
+      }
+    } catch (e) {
+      console.error('Parse attachments failed:', e);
+    }
+
+    const newAttachment = {
+      id: crypto.randomUUID(),
+      name: req.file.originalname,
+      url: fileUrl,
+      fileType: req.file.mimetype,
+      category: category || 'REPAIR_PHOTO',
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: req.user!.name
+    };
+
+    currentAttachments.push(newAttachment);
+
+    const updated = await prisma.serviceTicket.update({
+      where: { id },
+      data: {
+        attachments: JSON.stringify(currentAttachments)
+      }
+    });
+
+    return res.json({ message: 'Attachment uploaded successfully', attachment: newAttachment, ticket: updated });
+  } catch (error) {
+    console.error('Upload attachment error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -3084,7 +3801,7 @@ app.post('/api/quotes', optionalAuthenticate, async (req: Request, res: Response
 app.get('/api/quotes', authenticate, async (req: Request, res: Response) => {
   try {
     let quotes;
-    if (req.user!.role === 'ADMIN') {
+    if (req.user!.role === UserRole.ADMIN) {
       quotes = await prisma.quoteRequest.findMany({
         orderBy: { createdAt: 'desc' }
       });
@@ -3386,7 +4103,7 @@ app.post('/api/payments/verify', authenticate, async (req: Request, res: Respons
 
       // Notify administrators
       try {
-        const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+        const admins = await prisma.user.findMany({ where: { role: UserRole.ADMIN } });
         for (const admin of admins) {
           await sendAdminNewOrderEmail(admin.email, fullOrder);
         }
@@ -3692,7 +4409,7 @@ app.get('/api/admin/analytics', requireAdmin, async (req: Request, res: Response
   try {
     const ordersCount = await prisma.order.count();
     const productsCount = await prisma.product.count();
-    const customersCount = await prisma.user.count({ where: { role: 'CUSTOMER' } });
+    const customersCount = await prisma.user.count({ where: { role: UserRole.CUSTOMER } });
     const serviceRequestsCount = await prisma.serviceBooking.count();
 
     const orders = await prisma.order.findMany({

@@ -70,6 +70,10 @@ import { AuthService } from '../../services/auth.service';
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             <span>Activity Audit Logs</span>
           </a>
+          <a routerLink="/admin/employees" routerLinkActive="bg-indigo-600 text-white" class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span>Employee Directory</span>
+          </a>
           
           <div class="border-t border-slate-800 my-4 pt-4">
             <a routerLink="/" class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-500 hover:text-white transition-colors">

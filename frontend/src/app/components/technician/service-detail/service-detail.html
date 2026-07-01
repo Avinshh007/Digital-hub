@@ -1,0 +1,337 @@
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Top Bar Navigation -->
+    <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div class="flex items-center space-x-3">
+        <a routerLink="/technician/dashboard" class="p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 transition-all text-xs font-bold uppercase cursor-pointer">
+          &larr; Back to Dashboard
+        </a>
+        <div>
+          <h1 class="text-base font-black uppercase text-slate-850 dark:text-slate-100 tracking-tight">Work Order #{{ ticket()?.ticketNumber }}</h1>
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Device repair operations and diagnostic workflow control sheet</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Read-Only Badge Warning -->
+    <div *ngIf="isReadOnly()" class="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/30 p-4 rounded-2xl text-xs font-bold flex items-center gap-2">
+      <span>🔒</span> Read Only - Assigned to another technician.
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="h-64 flex flex-col items-center justify-center space-y-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl">
+      <svg class="animate-spin h-8 w-8 text-indigo-650" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="text-[10px] text-slate-400 font-black tracking-widest uppercase">Fetching work order details...</span>
+    </div>
+
+    <!-- Error/Success Alerts -->
+    <div *ngIf="error()" class="p-4 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/30 rounded-2xl text-xs font-semibold">
+      {{ error() }}
+    </div>
+    <div *ngIf="successMessage()" class="p-4 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/30 rounded-2xl text-xs font-semibold animate-pulse">
+      {{ successMessage() }}
+    </div>
+
+    <!-- Main Detail Grid -->
+    <div *ngIf="!loading() && ticket()" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Left Column (Diagnostic, Attachments, Audit Logs) -->
+      <div class="lg:col-span-8 space-y-6">
+        
+        <!-- Customer & Device Details Sheet -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xs space-y-4">
+          <h2 class="text-xs font-black uppercase text-slate-800 dark:text-slate-200 tracking-wider">Device & Customer Information</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-normal">
+            <div class="space-y-2">
+              <span class="text-[9px] font-black uppercase text-slate-400 block mb-1">Customer Account</span>
+              <div class="font-bold text-slate-850 dark:text-slate-100">{{ ticket().customerName }}</div>
+              <div class="text-slate-500">Email: <span class="font-mono">{{ ticket().email || 'No email provided' }}</span></div>
+              <div class="text-slate-500">Phone: <span class="font-mono">{{ ticket().mobileNumber }}</span></div>
+            </div>
+            
+            <div class="space-y-2">
+              <span class="text-[9px] font-black uppercase text-slate-400 block mb-1">Device Details</span>
+              <div class="font-bold text-slate-850 dark:text-slate-100">{{ ticket().brand }} {{ ticket().model }}</div>
+              <div class="text-slate-500">Category: <span class="font-bold text-indigo-600 dark:text-indigo-400 uppercase text-[10px]">{{ ticket().deviceType }}</span></div>
+              <div class="text-slate-500">Serial No: <span class="font-mono font-bold">{{ ticket().deviceSerialNumber || 'N/A' }}</span></div>
+              <div class="text-slate-500">Condition: <span class="font-semibold">{{ ticket().deviceCondition || 'Good' }}</span></div>
+              <div class="text-slate-500">Accessories: <span class="font-semibold text-amber-600">{{ ticket().accessoriesReceived || 'None' }}</span></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 dark:bg-slate-950/20 p-4 rounded-2xl border border-slate-150 dark:border-slate-800 text-xs font-semibold">
+            <span class="text-[8px] font-black uppercase text-slate-400 block mb-1">Problem Reported</span>
+            "{{ ticket().problemDescription }}"
+          </div>
+        </div>
+
+        <!-- Technical Diagnostics & Internal Notes -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xs space-y-4">
+          <h2 class="text-xs font-black uppercase text-slate-800 dark:text-slate-200 tracking-wider">Technical Diagnostics</h2>
+          
+          <!-- Read-Only View of Diagnostics -->
+          <div *ngIf="isReadOnly()" class="space-y-4 text-xs font-semibold leading-normal">
+            <div>
+              <span class="text-[9px] font-black uppercase text-slate-400 block mb-1">Technical Diagnosis</span>
+              <div class="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                {{ ticket().diagnosis || 'No diagnostics recorded yet.' }}
+              </div>
+            </div>
+            <div>
+              <span class="text-[9px] font-black uppercase text-slate-400 block mb-1">Repair Observations</span>
+              <div class="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                {{ ticket().observations || 'No observations recorded yet.' }}
+              </div>
+            </div>
+            <div class="border-t border-slate-100 dark:border-slate-800/80 pt-4">
+              <span class="text-[9px] font-black uppercase text-rose-500 block mb-1">Internal Service Notes (Staff Only)</span>
+              <div class="bg-rose-50/10 dark:bg-slate-950/40 p-4 rounded-2xl border border-rose-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+                {{ ticket().internalNotes || 'No internal notes recorded yet.' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit-Mode View of Diagnostics -->
+          <div *ngIf="!isReadOnly()" class="space-y-4 text-xs">
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Technical Diagnosis</label>
+              <textarea [(ngModel)]="diagnosis" rows="3" placeholder="Enter root cause analysis, test findings..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 px-4 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105 font-medium"></textarea>
+            </div>
+            
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Repair Observations</label>
+              <textarea [(ngModel)]="observations" rows="2" placeholder="List components checked, motherboard rails state..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 px-4 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105 font-medium"></textarea>
+            </div>
+
+            <div class="border-t border-slate-100 dark:border-slate-800/80 pt-4">
+              <label class="block text-[9px] font-black text-rose-500 uppercase mb-2">Internal Service Notes (Staff Only - Hidden from Customer)</label>
+              <textarea [(ngModel)]="internalNotes" rows="2" placeholder="Notes for manager/billing, component ordering refs..." class="w-full bg-slate-50 dark:bg-slate-905 border border-slate-200 dark:border-slate-800 rounded-2xl py-3 px-4 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105 font-medium"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generalized Attachment System -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xs space-y-4">
+          <h2 class="text-xs font-black uppercase text-slate-800 dark:text-slate-200 tracking-wider">Repair Photos & Documents</h2>
+          
+          <!-- Upload Form (Hide in Read-Only) -->
+          <div *ngIf="!isReadOnly()" class="flex flex-col sm:flex-row items-end gap-3 bg-slate-50 dark:bg-slate-950/20 p-4 rounded-2xl border border-slate-150 dark:border-slate-800 text-xs">
+            <div class="flex-1 w-full">
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Select File</label>
+              <input type="file" id="fileInput" (change)="onFileSelected($event)" class="w-full bg-white dark:bg-slate-950 rounded-xl py-1.5 px-3 border border-slate-200 dark:border-slate-800" />
+            </div>
+            
+            <div class="w-full sm:w-48">
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Category</label>
+              <select [(ngModel)]="uploadCategory" class="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600">
+                <option value="INSPECTION_PHOTO">Inspection Photo</option>
+                <option value="REPAIR_PHOTO">Repair Photo</option>
+                <option value="WARRANTY_DOC">Warranty Document</option>
+                <option value="CUSTOMER_ATTACHMENT">Customer Attachment</option>
+                <option value="INVOICE_ATTACHMENT">Invoice Attachment</option>
+              </select>
+            </div>
+
+            <button type="button" (click)="onUploadAttachment()" [disabled]="uploading || !selectedFile" class="py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[10px] tracking-wider rounded-xl cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed">
+              {{ uploading ? 'Uploading...' : 'Upload File' }}
+            </button>
+          </div>
+
+          <!-- Attachments List -->
+          <div class="space-y-4">
+            <h3 class="text-[10px] font-black uppercase tracking-wider text-slate-400">Uploaded Attachments</h3>
+            
+            <div *ngIf="attachmentsList.length > 0" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div *ngFor="let file of attachmentsList" class="bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl flex flex-col justify-between space-y-3">
+                <div class="relative group overflow-hidden rounded-xl border border-slate-200/50 bg-slate-100 aspect-video flex items-center justify-center">
+                  <img *ngIf="file.fileType.startsWith('image/')" [src]="file.url" alt="photo" class="object-cover w-full h-full" />
+                  <div *ngIf="!file.fileType.startsWith('image/')" class="text-2xl text-slate-400 font-black font-mono">FILE</div>
+                </div>
+
+                <div class="text-[10px] space-y-1">
+                  <span class="block font-bold text-slate-800 dark:text-slate-200 truncate" [title]="file.name">{{ file.name }}</span>
+                  <span class="block text-[8px] font-black uppercase bg-indigo-100 text-indigo-850 px-1.5 py-0.5 rounded-full w-fit">{{ file.category.replace('_', ' ') }}</span>
+                  <span class="block text-[8px] text-slate-400 font-mono">By: {{ file.uploadedBy }}</span>
+                </div>
+
+                <a [href]="file.url" target="_blank" class="w-full text-center py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold uppercase text-[9px] tracking-wider rounded-lg transition-colors cursor-pointer">
+                  Download / View
+                </a>
+              </div>
+            </div>
+
+            <p *ngIf="attachmentsList.length === 0" class="text-center py-6 text-slate-400 font-black uppercase text-[10px]">No attachments uploaded yet.</p>
+          </div>
+        </div>
+
+        <!-- History & Service Audit Logs -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xs space-y-4">
+          <h2 class="text-xs font-black uppercase text-slate-800 dark:text-slate-200 tracking-wider">Service Operations Audit Logs</h2>
+          
+          <div class="space-y-4 text-xs">
+            <div *ngFor="let log of ticket().serviceAuditLogs" class="flex gap-4 items-start relative pb-4 last:pb-0">
+              <div class="w-2.5 h-2.5 rounded-full bg-indigo-650 mt-1 flex-shrink-0 z-10"></div>
+              
+              <div class="space-y-1 leading-normal flex-grow bg-slate-50 dark:bg-slate-950/20 p-4 rounded-2xl border border-slate-150 dark:border-slate-800">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                  <span class="font-bold text-slate-800 dark:text-slate-200">
+                    Status: 
+                    <span class="text-indigo-600 dark:text-indigo-400 font-black uppercase">{{ log.previousStatus }} &rarr; {{ log.newStatus }}</span>
+                  </span>
+                  <span class="text-[9px] text-slate-400 font-mono">{{ log.createdAt | date:'medium' }}</span>
+                </div>
+                <div class="text-[10px] text-slate-500">Operator: <span class="font-bold text-slate-700 dark:text-slate-300">{{ log.userName }} ({{ log.userEmail }})</span></div>
+                <div class="text-slate-655 dark:text-slate-355 font-semibold mt-1">"{{ log.remarks }}"</div>
+              </div>
+            </div>
+
+            <p *ngIf="!ticket().serviceAuditLogs || ticket().serviceAuditLogs.length === 0" class="text-center py-6 text-slate-400 font-black uppercase text-[10px]">No audit log entries recorded.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column (Status Workflow & Financial Costing) -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <!-- Workflow Status Transitions -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xs space-y-4">
+          <h2 class="text-xs font-black uppercase text-slate-800 dark:text-slate-200 tracking-wider">Workflow Transition Control</h2>
+          
+          <!-- Read-Only Status Workflow -->
+          <div *ngIf="isReadOnly()" class="space-y-4 text-xs font-semibold leading-normal">
+            <div>
+              <span class="text-[9px] font-black uppercase text-slate-400 block mb-1">Repair Status</span>
+              <span class="bg-indigo-100 text-indigo-850 px-3 py-1.5 border border-indigo-200 text-[10px] font-black uppercase rounded-lg block w-fit">
+                {{ status.replace('_', ' ') }}
+              </span>
+            </div>
+            <div>
+              <span class="text-[9px] font-black uppercase text-slate-400 block mb-1">Job Priority</span>
+              <span class="bg-rose-100 text-rose-850 px-3 py-1.5 border border-rose-200 text-[10px] font-black uppercase rounded-lg block w-fit">
+                {{ priority }}
+              </span>
+            </div>
+            <div>
+              <span class="text-[9px] font-black uppercase text-slate-400 block mb-1">Estimated Completion</span>
+              <div class="font-mono text-slate-800 dark:text-slate-100 font-bold bg-slate-50 dark:bg-slate-950 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                {{ estimatedCompletionDate ? (estimatedCompletionDate | date:'mediumDate') : 'Not Set' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit-Mode Status Workflow -->
+          <div *ngIf="!isReadOnly()" class="space-y-4 text-xs">
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Repair Status</label>
+              <select [(ngModel)]="status" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 font-bold uppercase text-[10px] tracking-wider text-slate-750">
+                <option *ngFor="let s of statusList" [value]="s.value">{{ s.label }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Job Priority</label>
+              <select [(ngModel)]="priority" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 font-bold uppercase text-[10px] tracking-wider text-slate-750">
+                <option *ngFor="let p of priorityList" [value]="p.value">{{ p.label }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Estimated Completion</label>
+              <input type="date" [(ngModel)]="estimatedCompletionDate" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600" />
+            </div>
+
+            <div class="border-t border-slate-100 dark:border-slate-800/80 pt-4">
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-2">Remarks / Update Notes</label>
+              <input type="text" [(ngModel)]="remarks" placeholder="Provide reason/details for status update..." class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105" />
+            </div>
+
+            <button type="button" (click)="onSaveWorkflow()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[10px] tracking-wider rounded-xl shadow-xs transition-colors cursor-pointer">
+              Save Work Order State
+            </button>
+          </div>
+        </div>
+
+        <!-- Financial Estimator Sheet -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xs space-y-4">
+          <h2 class="text-xs font-black uppercase text-slate-800 dark:text-slate-200 tracking-wider">Financial Estimator & Parts Cost</h2>
+          
+          <!-- Read-Only View of Costs -->
+          <div *ngIf="isReadOnly()" class="space-y-2 text-xs font-semibold leading-normal">
+            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-850">
+              <span class="text-slate-400">Parts Cost:</span>
+              <span class="font-mono text-slate-800 dark:text-slate-200">₹{{ partsCost.toLocaleString('en-IN') }}</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-850">
+              <span class="text-slate-400">Labour Cost:</span>
+              <span class="font-mono text-slate-800 dark:text-slate-200">₹{{ labourCost.toLocaleString('en-IN') }}</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-850">
+              <span class="text-slate-400">Other Charges:</span>
+              <span class="font-mono text-slate-800 dark:text-slate-200">₹{{ otherCharges.toLocaleString('en-IN') }}</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-850">
+              <span class="text-slate-400">GST / Tax Amount:</span>
+              <span class="font-mono text-slate-800 dark:text-slate-200">₹{{ taxAmount.toLocaleString('en-IN') }}</span>
+            </div>
+            <div class="flex justify-between py-1.5 border-b border-slate-100 dark:border-slate-850">
+              <span class="text-slate-400">Discounts Offered:</span>
+              <span class="font-mono text-emerald-600 dark:text-emerald-400">-₹{{ discountAmount.toLocaleString('en-IN') }}</span>
+            </div>
+          </div>
+
+          <!-- Edit-Mode View of Costs -->
+          <div *ngIf="!isReadOnly()" class="space-y-3 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Parts Cost (₹)</label>
+                <input type="number" [(ngModel)]="partsCost" name="partsCost" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105" />
+              </div>
+              <div>
+                <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Labour Cost (₹)</label>
+                <input type="number" [(ngModel)]="labourCost" name="labourCost" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Other Charges (₹)</label>
+                <input type="number" [(ngModel)]="otherCharges" name="otherCharges" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105" />
+              </div>
+              <div>
+                <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">GST / Tax Amount (₹)</label>
+                <input type="number" [(ngModel)]="taxAmount" name="taxAmount" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[9px] font-black text-slate-400 uppercase mb-1">Discounts Offered (₹)</label>
+              <input type="number" [(ngModel)]="discountAmount" name="discountAmount" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-2 px-3 focus:outline-none focus:ring-1 focus:ring-indigo-600 text-slate-800 dark:text-slate-105" />
+            </div>
+          </div>
+
+          <!-- Grand Total Display Card -->
+          <div class="bg-indigo-900 text-white p-4 rounded-2xl text-center space-y-1 shadow-md border border-indigo-950">
+            <span class="text-[8px] font-black uppercase text-indigo-300 tracking-widest block">Computed Grand Total</span>
+            <span class="text-2xl font-black font-mono">₹{{ grandTotal.toLocaleString('en-IN') }}</span>
+          </div>
+          
+          <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider text-center">Grand Total = (Parts + Labour + Other + GST) - Discount</p>
+
+          <!-- Save Button (Hide in Read-Only) -->
+          <button *ngIf="!isReadOnly()" type="button" (click)="onSaveWorkflow()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[10px] tracking-wider rounded-xl shadow-xs transition-colors cursor-pointer mt-2">
+            Save Costs & Estimates
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>

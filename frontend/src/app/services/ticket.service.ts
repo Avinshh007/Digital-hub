@@ -16,6 +16,7 @@ export interface ServiceTicket {
   expectedDeliveryDate: string;
   technicianName?: string;
   assignedTechnician?: string;
+  assignedTechnicianId?: string;
   estimatedCost: number;
   notes?: string;
   status: string;
@@ -37,6 +38,18 @@ export interface ServiceTicket {
   serialNumber?: string;
   amcId?: string;
   userId?: string;
+
+  // New Sprint 2 fields
+  diagnosis?: string;
+  observations?: string;
+  internalNotes?: string;
+  partsCost?: number;
+  labourCost?: number;
+  otherCharges?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  totalCost?: number;
+  attachments?: string;
 
   createdAt: string;
   updatedAt: string;
@@ -84,6 +97,129 @@ export class TicketService {
   async updateTicket(id: string, ticketData: Partial<ServiceTicket>): Promise<{ message: string; ticket: ServiceTicket }> {
     return firstValueFrom(
       this.http.put<{ message: string; ticket: ServiceTicket }>(`${this.apiUrl}/${id}`, ticketData, { withCredentials: true })
+    );
+  }
+
+  // --- SPRINT 1 SERVICE MANAGEMENT ---
+  async createServiceTicket(ticketData: {
+    customerName: string;
+    mobileNumber: string;
+    email?: string;
+    deviceType: string;
+    brand: string;
+    model: string;
+    serialNumber?: string;
+    problemDescription: string;
+  }): Promise<{ message: string; ticket: ServiceTicket }> {
+    return firstValueFrom(
+      this.http.post<{ message: string; ticket: ServiceTicket }>(
+        `${environment.apiUrl}/services`,
+        ticketData,
+        { withCredentials: true }
+      )
+    );
+  }
+
+  async getServiceTickets(): Promise<{ tickets: ServiceTicket[] }> {
+    return firstValueFrom(
+      this.http.get<{ tickets: ServiceTicket[] }>(
+        `${environment.apiUrl}/services`,
+        { withCredentials: true }
+      )
+    );
+  }
+
+  async trackServiceTicket(serviceId: string): Promise<{ ticket: ServiceTicket }> {
+    return firstValueFrom(
+      this.http.get<{ ticket: ServiceTicket }>(
+        `${environment.apiUrl}/services/${serviceId}`,
+        { withCredentials: true }
+      )
+    );
+  }
+
+  async updateServiceTicketStatus(id: string, status: string): Promise<{ message: string; ticket: ServiceTicket }> {
+    return firstValueFrom(
+      this.http.patch<{ message: string; ticket: ServiceTicket }>(
+        `${environment.apiUrl}/services/${id}/status`,
+        { status },
+        { withCredentials: true }
+      )
+    );
+  }
+
+  // --- SPRINT 2 EMPLOYEE & TECHNICIAN WORKFLOW ---
+
+  async getEmployees(): Promise<{ employees: any[] }> {
+    return firstValueFrom(
+      this.http.get<{ employees: any[] }>(`${environment.apiUrl}/admin/employees`, { withCredentials: true })
+    );
+  }
+
+  async createEmployee(employeeData: any): Promise<{ message: string; employee: any }> {
+    return firstValueFrom(
+      this.http.post<{ message: string; employee: any }>(`${environment.apiUrl}/admin/employees`, employeeData, { withCredentials: true })
+    );
+  }
+
+  async deleteEmployee(id: string): Promise<{ message: string }> {
+    return firstValueFrom(
+      this.http.delete<{ message: string }>(`${environment.apiUrl}/admin/employees/${id}`, { withCredentials: true })
+    );
+  }
+
+  async getTechnicians(): Promise<{ technicians: any[] }> {
+    return firstValueFrom(
+      this.http.get<{ technicians: any[] }>(`${environment.apiUrl}/admin/technicians`, { withCredentials: true })
+    );
+  }
+
+  async getTechnicianJobs(): Promise<{ tickets: ServiceTicket[] }> {
+    return firstValueFrom(
+      this.http.get<{ tickets: ServiceTicket[] }>(`${environment.apiUrl}/technician/jobs`, { withCredentials: true })
+    );
+  }
+
+  async getTechnicianServiceDetail(id: string): Promise<{ ticket: ServiceTicket & { serviceAuditLogs?: any[] } }> {
+    return firstValueFrom(
+      this.http.get<{ ticket: ServiceTicket & { serviceAuditLogs?: any[] } }>(`${environment.apiUrl}/technician/service/${id}`, { withCredentials: true })
+    );
+  }
+
+  async updateTechnicianService(id: string, data: any): Promise<{ message: string; ticket: ServiceTicket }> {
+    return firstValueFrom(
+      this.http.patch<{ message: string; ticket: ServiceTicket }>(`${environment.apiUrl}/technician/service/${id}`, data, { withCredentials: true })
+    );
+  }
+
+  async assignTechnician(id: string, technicianId: string | null): Promise<{ message: string; ticket: ServiceTicket }> {
+    return firstValueFrom(
+      this.http.patch<{ message: string; ticket: ServiceTicket }>(`${environment.apiUrl}/services/${id}/assign`, { technicianId }, { withCredentials: true })
+    );
+  }
+
+  async getServiceAuditLogs(id: string): Promise<{ logs: any[] }> {
+    return firstValueFrom(
+      this.http.get<{ logs: any[] }>(`${environment.apiUrl}/services/${id}/audit-logs`, { withCredentials: true })
+    );
+  }
+
+  async uploadAttachment(id: string, file: File, category: string): Promise<{ message: string; attachment: any; ticket: ServiceTicket }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', category);
+    return firstValueFrom(
+      this.http.post<{ message: string; attachment: any; ticket: ServiceTicket }>(
+        `${environment.apiUrl}/services/${id}/attachments`,
+        formData,
+        { withCredentials: true }
+      )
+    );
+  }
+
+  async getTechnicianServiceQueue(): Promise<{ tickets: ServiceTicket[] }> {
+    return firstValueFrom(
+      this.http.get<{ tickets: ServiceTicket[] }>(`${environment.apiUrl}/technician/service-queue`, { withCredentials: true })
     );
   }
 }

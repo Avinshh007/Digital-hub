@@ -58,8 +58,16 @@ export const routes: Routes = [
     loadComponent: () => import('./components/wishlist/wishlist').then(m => m.WishlistComponent) 
   },
   { 
+    path: 'services', 
+    loadComponent: () => import('./components/services/services').then(m => m.ServicesComponent) 
+  },
+  { 
     path: 'services/book', 
-    loadComponent: () => import('./components/service-booking/service-booking').then(m => m.ServiceBookingComponent) 
+    loadComponent: () => import('./components/services/book/book').then(m => m.ServicesBookComponent) 
+  },
+  { 
+    path: 'services/track', 
+    loadComponent: () => import('./components/services/track/track').then(m => m.ServicesTrackComponent) 
   },
   { 
     path: 'request-quote', 
@@ -139,9 +147,23 @@ export const routes: Routes = [
         path: 'audit', 
         loadComponent: () => import('./components/admin/audit/audit').then(m => m.AdminAuditComponent) 
       },
+      {
+        path: 'employees',
+        loadComponent: () => import('./components/admin/employees/employees').then(m => m.AdminEmployeesComponent)
+      }
     ]
   },
   
+  // Technician Routes
+  {
+    path: 'technician/dashboard',
+    loadComponent: () => import('./components/technician/dashboard/dashboard').then(m => m.TechnicianDashboardComponent)
+  },
+  {
+    path: 'technician/service/:id',
+    loadComponent: () => import('./components/technician/service-detail/service-detail').then(m => m.TechnicianServiceDetailComponent)
+  },
+
   // Redirect unknown routes to home
   { path: '**', redirectTo: '' }
 ];
